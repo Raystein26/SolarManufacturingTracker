@@ -294,4 +294,4 @@ def add_project():
             flash(f'Error adding project: {str(e)}', 'danger')
             return redirect(url_for('add_project'))
     
-    return render_template('add_project.html')
+    return render_template('add_project.html', datetime=datetime)
