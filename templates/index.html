@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - India Renewable Manufacturing Tracker{% endblock %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-body-tertiary rounded-3">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-solar-panel text-warning me-2"></i>
+            India Renewable Manufacturing Tracker
+        </h1>
+        <p class="col-md-8 fs-4">
+            Track solar and battery manufacturing projects across India. Stay updated with the latest developments in India's renewable energy manufacturing ecosystem.
+        </p>
+        <div class="d-flex gap-2">
+            <a href="/projects" class="btn btn-primary btn-lg">
+                <i class="fas fa-list me-1"></i> View Projects
+            </a>
+            <a href="/dashboard" class="btn btn-outline-secondary btn-lg">
+                <i class="fas fa-chart-line me-1"></i> Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget bg-dark-subtle">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-solar-panel text-warning me-2"></i> Solar Projects
+                </h5>
+                <p class="display-4 fw-bold mb-0">{{ solar_count }}</p>
+                <p class="text-muted">Manufacturing Facilities</p>
+                <a href="/projects?type=solar" class="btn btn-warning">View Solar Projects</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget bg-dark-subtle">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-battery-three-quarters text-info me-2"></i> Battery Projects
+                </h5>
+                <p class="display-4 fw-bold mb-0">{{ battery_count }}</p>
+                <p class="text-muted">Manufacturing Facilities</p>
+                <a href="/projects?type=battery" class="btn btn-info">View Battery Projects</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget bg-dark-subtle">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-newspaper text-primary me-2"></i> News Sources
+                </h5>
+                <p class="display-4 fw-bold mb-0">{{ sources_count }}</p>
+                <p class="text-muted">Being Tracked</p>
+                <a href="/sources" class="btn btn-primary">View Sources</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Highlights and State Map -->
+<div class="row">
+    <!-- Recent Projects -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i> Recent Projects
+                </h5>
+                <a href="/projects" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_projects %}
+                    {% for project in recent_projects %}
+                        <div class="card mb-3 project-card {{ 'solar' if project.type == 'Solar' else 'battery' }}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h5 class="card-title">{{ project.name }}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">{{ project.company }}</h6>
+                                    </div>
+                                    <span class="badge {% if project.type == 'Solar' %}bg-warning{% else %}bg-info{% endif %}">{{ project.type }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <div>
+                                        <small class="text-muted d-block">Location: {{ project.state if project.state != 'NA' else 'Unknown' }}</small>
+                                        <small class="text-muted d-block">Capacity: 
+                                            {% if project.type == 'Solar' %}
+                                                {{ project.module_capacity }} GW
+                                            {% else %}
+                                                {{ project.module_capacity }} GWh
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge status-{{ project.status|lower|replace(' ', '-') }}">{{ project.status }}</span>
+                                        <small class="text-muted d-block">Added: {{ project.created_at.strftime('%d %b %Y') }}</small>
+                                    </div>
+                                </div>
+                                <a href="/project/{{ project.id }}" class="stretched-link"></a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">No projects found. Start by running a data update or adding projects manually.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- State Distribution -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-map-marker-alt me-2"></i> Projects by State
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if state_summary %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>State</th>
+                                    <th class="text-end">Projects</th>
+                                    <th class="text-end">%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set total = state_summary|sum(attribute='count') %}
+                                {% for state in state_summary|sort(attribute='count', reverse=True) %}
+                                    <tr>
+                                        <td>{{ state.state if state.state != 'NA' else 'Unknown' }}</td>
+                                        <td class="text-end">{{ state.count }}</td>
+                                        <td class="text-end">{{ (state.count / total * 100)|round(1) }}%</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">No state data available. Start by running a data update or adding projects manually.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-4 text-center">Key Features</h3>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget bg-dark-subtle">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-robot text-primary fa-3x"></i>
+                </div>
+                <h5 class="card-title">Automated Data Collection</h5>
+                <p class="card-text">Our system automatically scrapes reliable sources to find and track new solar and battery manufacturing projects in India.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget bg-dark-subtle">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-search-dollar text-success fa-3x"></i>
+                </div>
+                <h5 class="card-title">Detailed Project Information</h5>
+                <p class="card-text">Get comprehensive details including capacity, investment figures, timelines, and project status updates.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget bg-dark-subtle">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-file-excel text-warning fa-3x"></i>
+                </div>
+                <h5 class="card-title">Excel Integration</h5>
+                <p class="card-text">Easily export all project data to Excel for further analysis, reporting, and sharing with stakeholders.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action -->
+<div class="p-5 mb-4 bg-body-tertiary rounded-3 text-center">
+    <div class="container-fluid py-3">
+        <h2>Start Tracking India's Renewable Manufacturing Growth</h2>
+        <p class="lead">
+            Keep a pulse on the expanding solar and battery manufacturing ecosystem in India.
+        </p>
+        <button id="cta-manual-check-button" class="btn btn-primary btn-lg" onclick="runManualCheck()">
+            <i class="fas fa-sync-alt me-1"></i> Update Now
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Connect CTA button to the same function as the main update button
+    document.getElementById('cta-manual-check-button').addEventListener('click', function() {
+        runManualCheck();
+    });
+</script>
+{% endblock %}

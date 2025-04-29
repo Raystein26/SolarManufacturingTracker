@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - India Renewable Manufacturing Tracker{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="fas fa-chart-line me-2"></i> Project Dashboard</h2>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <!-- Projects by Type -->
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-header">
+                <h5 class="mb-0">Projects by Type</h5>
+            </div>
+            <div class="card-body text-center">
+                <canvas id="projects-by-type-chart" height="200"
+                    data-labels="{% for item in projects_by_type %}{{ item.type }}{% if not loop.last %},{% endif %}{% endfor %}"
+                    data-values="{% for item in projects_by_type %}{{ item.count }}{% if not loop.last %},{% endif %}{% endfor %}">
+                </canvas>
+            </div>
+            <div class="card-footer text-muted d-flex justify-content-between">
+                <small>Total: {{ projects_by_type|sum(attribute='count') }} projects</small>
+                <a href="/projects" class="text-decoration-none">View All</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects by Status -->
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-header">
+                <h5 class="mb-0">Projects by Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for item in projects_by_status %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span>{{ item.status }}</span>
+                        <span class="badge status-{{ item.status|lower|replace(' ', '-') }} rounded-pill">{{ item.count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                <small>Distribution of projects by current status</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Capacity -->
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-header">
+                <h5 class="mb-0">Aggregate Capacity</h5>
+            </div>
+            <div class="card-body text-center">
+                <canvas id="capacity-chart" height="200"
+                    data-solar-capacity="{{ solar_capacity }}"
+                    data-battery-capacity="{{ battery_capacity }}">
+                </canvas>
+            </div>
+            <div class="card-footer text-muted">
+                <div class="d-flex justify-content-between">
+                    <small class="text-warning">Solar: {{ solar_capacity|round(2) }} GW</small>
+                    <small class="text-info">Battery: {{ battery_capacity|round(2) }} GWh</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Second Row -->
+<div class="row mb-4">
+    <!-- Projects by State -->
+    <div class="col-lg-8 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Projects by State</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" id="chart-view-btn">Chart</button>
+                    <button type="button" class="btn btn-outline-secondary" id="map-view-btn">Map</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="chart-view">
+                    <canvas id="projects-by-state-chart" height="250"
+                        data-labels="{% for item in projects_by_state %}{{ item.state }}{% if not loop.last %},{% endif %}{% endfor %}"
+                        data-values="{% for item in projects_by_state %}{{ item.count }}{% if not loop.last %},{% endif %}{% endfor %}">
+                    </canvas>
+                </div>
+                <div id="map-view" style="display:none;">
+                    <div id="india-map" class="text-center p-5">
+                        <p class="text-muted"><i class="fas fa-map-marked-alt fs-1 mb-3"></i></p>
+                        <p>Interactive map visualization would be displayed here.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                <small>Geographical distribution of projects across India</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-4 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for log in recent_logs %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span class="badge {% if log.status == 'Completed' %}bg-success{% elif log.status == 'Error' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ log.status }}
+                            </span>
+                            <small class="text-muted">{{ log.timestamp.strftime('%d %b, %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1 mt-1">
+                            {% if log.source %}
+                                <small>Source: {{ log.source.name }}</small>
+                            {% else %}
+                                <small>System check</small>
+                            {% endif %}
+                        </p>
+                        <p class="mb-0 small text-muted">
+                            {% if log.articles_found > 0 %}
+                                {{ log.articles_found }} articles found,
+                            {% endif %}
+                            {% if log.projects_added > 0 %}
+                                {{ log.projects_added }} projects added
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                <small>Last checked: {{ recent_logs[0].timestamp.strftime('%d %b %Y, %H:%M') if recent_logs else 'Never' }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <div class="d-grid">
+                            <button id="dashboard-manual-check-button" class="btn btn-primary" onclick="runManualCheck()">
+                                <i class="fas fa-sync-alt me-2"></i> Update Data
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <div class="d-grid">
+                            <button id="dashboard-export-excel-button" class="btn btn-success" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel me-2"></i> Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="/add-project" class="btn btn-outline-secondary">
+                                <i class="fas fa-plus me-2"></i> Add Project Manually
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dashboard buttons
+        document.getElementById('dashboard-manual-check-button').addEventListener('click', function() {
+            runManualCheck();
+        });
+        
+        document.getElementById('dashboard-export-excel-button').addEventListener('click', function() {
+            exportToExcel();
+        });
+        
+        // Toggle between chart and map view
+        document.getElementById('chart-view-btn').addEventListener('click', function() {
+            document.getElementById('chart-view').style.display = 'block';
+            document.getElementById('map-view').style.display = 'none';
+            this.classList.add('active');
+            document.getElementById('map-view-btn').classList.remove('active');
+        });
+        
+        document.getElementById('map-view-btn').addEventListener('click', function() {
+            document.getElementById('chart-view').style.display = 'none';
+            document.getElementById('map-view').style.display = 'block';
+            this.classList.add('active');
+            document.getElementById('chart-view-btn').classList.remove('active');
+        });
+    });
+</script>
+{% endblock %}

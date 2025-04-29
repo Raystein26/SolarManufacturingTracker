@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}News Sources - India Renewable Manufacturing Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-newspaper me-2"></i> News Sources</h2>
+    <a href="/add-source" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Add Source
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p>
+            These are the news sources that are regularly checked for updates on solar and battery manufacturing projects in India.
+            Sources are automatically checked twice daily (6 AM and 6 PM) to find new project announcements.
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    {% for source in sources %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 source-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ source.name }}</h5>
+                <span class="badge {% if source.status == 'Success' %}bg-success{% elif source.status == 'Error' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ source.status if source.status else 'Pending' }}
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="text-truncate">
+                    <a href="{{ source.url }}" target="_blank" class="text-decoration-none">
+                        {{ source.url }}
+                        <i class="fas fa-external-link-alt ms-1 small"></i>
+                    </a>
+                </p>
+                <p class="card-text small text-muted">{{ source.description }}</p>
+            </div>
+            <div class="card-footer text-muted small">
+                {% if source.last_checked %}
+                    Last checked: {{ source.last_checked.strftime('%d %b %Y, %H:%M') }}
+                {% else %}
+                    Not checked yet
+                {% endif %}
+            </div>
+            <a href="/source/{{ source.id }}" class="stretched-link"></a>
+        </div>
+    </div>
+    {% endfor %}
+    
+    {% if not sources %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            No sources have been added yet. Add a source to start tracking news for renewable manufacturing projects.
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h4>How It Works</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 text-center mb-3">
+                <div class="p-3">
+                    <i class="fas fa-rss text-primary fa-3x mb-3"></i>
+                    <h5>Source Monitoring</h5>
+                    <p>We regularly check each news source for articles about solar and battery manufacturing in India.</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-3">
+                <div class="p-3">
+                    <i class="fas fa-search text-success fa-3x mb-3"></i>
+                    <h5>Information Extraction</h5>
+                    <p>Our system analyzes articles to extract key project details like capacity, investment, and location.</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-3">
+                <div class="p-3">
+                    <i class="fas fa-database text-warning fa-3x mb-3"></i>
+                    <h5>Database Updates</h5>
+                    <p>Newly discovered projects are automatically added to our database for tracking.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

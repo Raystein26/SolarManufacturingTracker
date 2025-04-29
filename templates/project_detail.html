@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - India Renewable Manufacturing Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/projects">Projects</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ project.name }}</li>
+            </ol>
+        </nav>
+        <h2>
+            {% if project.type == 'Solar' %}
+                <i class="fas fa-solar-panel text-warning me-2"></i>
+            {% else %}
+                <i class="fas fa-battery-three-quarters text-info me-2"></i>
+            {% endif %}
+            {{ project.name }}
+        </h2>
+    </div>
+    <span class="badge {% if project.type == 'Solar' %}bg-warning{% else %}bg-info{% endif %} fs-6">{{ project.type }}</span>
+</div>
+
+<div class="row">
+    <!-- Main Project Information -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Project Overview</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Company</p>
+                        <p class="fw-bold">{{ project.company }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Ownership</p>
+                        <p class="fw-bold">{{ project.ownership }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">PLI Status</p>
+                        <p class="fw-bold">{{ project.pli_status }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">State</p>
+                        <p class="fw-bold">{{ project.state }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Location</p>
+                        <p class="fw-bold">{{ project.location if project.location != 'NA' else '—' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Announced</p>
+                        <p class="fw-bold">{{ project.announcement_date.strftime('%d %b %Y') if project.announcement_date else '—' }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Category</p>
+                        <p class="fw-bold">{{ project.category if project.category != 'NA' else '—' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Input</p>
+                        <p class="fw-bold">{{ project.input_type }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="text-muted mb-1">Output</p>
+                        <p class="fw-bold">{{ project.output_type }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Specifications -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Technical Specifications</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    {% if project.type == 'Solar' %}
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-dark-subtle h-100">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Cell Capacity</h5>
+                                    <p class="display-5 fw-bold mb-0">{{ project.cell_capacity|round(2) }}</p>
+                                    <p class="text-muted">GW</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-dark-subtle h-100">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Module Capacity</h5>
+                                    <p class="display-5 fw-bold mb-0">{{ project.module_capacity|round(2) }}</p>
+                                    <p class="text-muted">GW</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-dark-subtle h-100">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Integration Capacity</h5>
+                                    <p class="display-5 fw-bold mb-0">{{ project.integration_capacity|round(2) }}</p>
+                                    <p class="text-muted">GW</p>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-dark-subtle h-100">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Cell Capacity</h5>
+                                    <p class="display-5 fw-bold mb-0">{{ project.cell_capacity|round(2) }}</p>
+                                    <p class="text-muted">GWh</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-dark-subtle h-100">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Module Capacity</h5>
+                                    <p class="display-5 fw-bold mb-0">{{ project.module_capacity|round(2) }}</p>
+                                    <p class="text-muted">GWh</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="card bg-dark-subtle h-100">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Integration Capacity</h5>
+                                    <p class="display-5 fw-bold mb-0">{{ project.integration_capacity|round(2) }}</p>
+                                    <p class="text-muted">GWh</p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="text-muted mb-1">Investment (USD)</p>
+                        <p class="fw-bold">{% if project.investment_usd > 0 %}$ {{ project.investment_usd|round(2) }} Million{% else %}—{% endif %}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="text-muted mb-1">Investment (INR)</p>
+                        <p class="fw-bold">{% if project.investment_inr > 0 %}₹ {{ project.investment_inr|round(2) }} Billion{% else %}—{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Source Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Source Information</h4>
+            </div>
+            <div class="card-body">
+                <p class="mb-1">Source URL:</p>
+                <p>
+                    <a href="{{ project.source }}" target="_blank" class="text-break">
+                        {{ project.source }}
+                        <i class="fas fa-external-link-alt ms-1 small"></i>
+                    </a>
+                </p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="text-muted mb-1">Added to Database</p>
+                        <p>{{ project.created_at.strftime('%d %b %Y, %H:%M') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="text-muted mb-1">Last Updated</p>
+                        <p>{{ project.last_updated.strftime('%d %b %Y') if project.last_updated else project.created_at.strftime('%d %b %Y') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Status Sidebar -->
+    <div class="col-lg-4">
+        <!-- Status Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Project Status</h4>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-4">
+                    <span class="badge status-{{ project.status|lower|replace(' ', '-') }} fs-5 me-2">{{ project.status }}</span>
+                    <span class="text-muted">Expected completion: {{ project.expected_completion }}</span>
+                </div>
+
+                <div class="project-timeline">
+                    <div class="timeline-item {% if project.status != 'Announced' %}active{% endif %}">
+                        <h5>Announced</h5>
+                        <p class="text-muted small">
+                            {% if project.announcement_date %}
+                                {{ project.announcement_date.strftime('%d %b %Y') }}
+                            {% else %}
+                                Date unknown
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="timeline-item {% if project.status in ['Land Acquisition', 'Under Construction', 'Commissioning'] %}active{% endif %}">
+                        <h5>Land Acquisition</h5>
+                        <p class="text-muted small">
+                            Status: {{ project.land_acquisition }}
+                        </p>
+                    </div>
+                    
+                    <div class="timeline-item {% if project.status in ['Under Construction', 'Commissioning'] %}active{% endif %}">
+                        <h5>Under Construction</h5>
+                        <p class="text-muted small">
+                            {% if project.status in ['Under Construction', 'Commissioning'] %}
+                                Power approval: {{ project.power_approval }}<br>
+                                Environment clearance: {{ project.environment_clearance }}
+                            {% else %}
+                                Not started
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="timeline-item {% if project.status == 'Commissioning' %}active{% endif %}">
+                        <h5>Commissioning</h5>
+                        <p class="text-muted small">
+                            {% if project.status == 'Commissioning' %}
+                                ALMM listing: {{ project.almm_listing }}
+                            {% else %}
+                                Not started
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit/Action Buttons -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> Edit Project
+                    </a>
+                    <button class="btn btn-outline-secondary">
+                        <i class="fas fa-file-export me-1"></i> Export Project Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

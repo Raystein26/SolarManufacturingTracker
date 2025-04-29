@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}About - India Renewable Manufacturing Tracker{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="mb-4"><i class="fas fa-info-circle me-2"></i> About This Project</h2>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <h4>Purpose</h4>
+                <p>
+                    The India Renewable Manufacturing Tracker is an automated system designed to monitor and catalog 
+                    solar and battery manufacturing projects across India. As the country rapidly expands its renewable 
+                    energy capacity, keeping track of manufacturing capabilities is crucial for stakeholders in the industry.
+                </p>
+                
+                <h4>Features</h4>
+                <ul>
+                    <li>Automated scraping of news sources for project updates</li>
+                    <li>Intelligent extraction of project details from articles</li>
+                    <li>Comprehensive tracking of both solar and battery manufacturing facilities</li>
+                    <li>Detailed project profiles with technical specifications and investment information</li>
+                    <li>Excel export functionality for data analysis</li>
+                    <li>Regular scheduled updates (twice daily)</li>
+                </ul>
+                
+                <h4>Technical Information</h4>
+                <p>
+                    This tracker is built using Python and Flask with a SQLite database backend. It uses web scraping 
+                    libraries (BeautifulSoup, newspaper3k, trafilatura) to gather information from reputable news sources 
+                    covering the renewable energy sector in India. The system employs natural language processing techniques 
+                    to extract relevant project details and maintain an organized database.
+                </p>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card bg-dark-subtle mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Project Statistics</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Solar Projects
+                                <span class="badge bg-warning rounded-pill">{{ solar_count }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Battery Projects
+                                <span class="badge bg-info rounded-pill">{{ battery_count }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                News Sources
+                                <span class="badge bg-primary rounded-pill">{{ sources_count }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Update Frequency
+                                <span class="badge bg-secondary rounded-pill">2x Daily</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card bg-dark-subtle">
+                    <div class="card-body">
+                        <h5 class="card-title">Tracked Data Points</h5>
+                        <p class="card-text">For each project, we track:</p>
+                        <ul class="small">
+                            <li>Project name and company</li>
+                            <li>Location information</li>
+                            <li>Manufacturing capacity</li>
+                            <li>Project status and timeline</li>
+                            <li>Investment details</li>
+                            <li>PLI scheme status</li>
+                            <li>Input/output materials</li>
+                            <li>Approvals and clearances</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h4 class="mt-4">Why Track Manufacturing?</h4>
+        <p>
+            India has set ambitious renewable energy goals, targeting 500 GW of non-fossil fuel capacity by 2030. 
+            Achieving these goals requires not just project deployment but also a robust domestic manufacturing ecosystem. 
+            This tracker helps:
+        </p>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-chart-line me-2 text-success"></i> Industry Analysts</h5>
+                        <p class="card-text">Track manufacturing capacity growth and identify market trends</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-building me-2 text-primary"></i> Project Developers</h5>
+                        <p class="card-text">Identify potential equipment suppliers and evaluate their capabilities</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-landmark me-2 text-warning"></i> Policy Makers</h5>
+                        <p class="card-text">Assess the effectiveness of manufacturing incentives and policies</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-money-bill-wave me-2 text-info"></i> Investors</h5>
+                        <p class="card-text">Identify investment opportunities and track market competition</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h4 class="mt-4">Data Sources</h4>
+        <p>
+            This tracker pulls information from reputable news sources covering the renewable energy sector in India, including:
+        </p>
+        <div class="row">
+            <div class="col-md-4">
+                <ul>
+                    <li>Mercom India</li>
+                    <li>PV Magazine India</li>
+                    <li>JMK Research</li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <ul>
+                    <li>PV Tech</li>
+                    <li>Economic Times Energy</li>
+                    <li>Business Standard</li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <ul>
+                    <li>LiveMint Energy</li>
+                    <li>The Hindu BusinessLine</li>
+                    <li>And others...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

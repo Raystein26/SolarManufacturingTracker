@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Project - India Renewable Manufacturing Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/projects">Projects</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Add Project</li>
+            </ol>
+        </nav>
+        <h2><i class="fas fa-plus-circle me-2"></i> Add New Project</h2>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Project Information</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/add-project">
+            <!-- Basic Information -->
+            <h5 class="mb-3">Basic Information</h5>
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <label for="type" class="form-label">Project Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="type" name="type" required>
+                        <option value="" selected disabled>Select type</option>
+                        <option value="Solar">Solar</option>
+                        <option value="Battery">Battery</option>
+                    </select>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label for="name" class="form-label">Project Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label for="company" class="form-label">Company <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="company" name="company" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="ownership" class="form-label">Ownership</label>
+                    <select class="form-select" id="ownership" name="ownership">
+                        <option value="Private">Private</option>
+                        <option value="PSU">PSU</option>
+                        <option value="Joint Venture">Joint Venture</option>
+                        <option value="Foreign">Foreign</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="pli_status" class="form-label">PLI Status</label>
+                    <select class="form-select" id="pli_status" name="pli_status">
+                        <option value="Non PLI" selected>Non PLI</option>
+                        <option value="PLI">PLI</option>
+                        <option value="NA">Not Applicable</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="announcement_date" class="form-label">Announcement Date</label>
+                    <input type="date" class="form-control" id="announcement_date" name="announcement_date" value="{{ datetime.datetime.now().strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="category" class="form-label">Category</label>
+                    <input type="text" class="form-control" id="category" name="category" value="Non PLI">
+                </div>
+            </div>
+
+            <!-- Location Information -->
+            <h5 class="mb-3">Location</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="state" class="form-label">State</label>
+                    <select class="form-select" id="state" name="state">
+                        <option value="NA">Not Available</option>
+                        <option value="Andhra Pradesh">Andhra Pradesh</option>
+                        <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                        <option value="Assam">Assam</option>
+                        <option value="Bihar">Bihar</option>
+                        <option value="Chhattisgarh">Chhattisgarh</option>
+                        <option value="Goa">Goa</option>
+                        <option value="Gujarat">Gujarat</option>
+                        <option value="Haryana">Haryana</option>
+                        <option value="Himachal Pradesh">Himachal Pradesh</option>
+                        <option value="Jharkhand">Jharkhand</option>
+                        <option value="Karnataka">Karnataka</option>
+                        <option value="Kerala">Kerala</option>
+                        <option value="Madhya Pradesh">Madhya Pradesh</option>
+                        <option value="Maharashtra">Maharashtra</option>
+                        <option value="Manipur">Manipur</option>
+                        <option value="Meghalaya">Meghalaya</option>
+                        <option value="Mizoram">Mizoram</option>
+                        <option value="Nagaland">Nagaland</option>
+                        <option value="Odisha">Odisha</option>
+                        <option value="Punjab">Punjab</option>
+                        <option value="Rajasthan">Rajasthan</option>
+                        <option value="Sikkim">Sikkim</option>
+                        <option value="Tamil Nadu">Tamil Nadu</option>
+                        <option value="Telangana">Telangana</option>
+                        <option value="Tripura">Tripura</option>
+                        <option value="Uttar Pradesh">Uttar Pradesh</option>
+                        <option value="Uttarakhand">Uttarakhand</option>
+                        <option value="West Bengal">West Bengal</option>
+                        <option value="Delhi">Delhi</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="location" class="form-label">Specific Location</label>
+                    <input type="text" class="form-control" id="location" name="location" value="NA">
+                </div>
+            </div>
+
+            <!-- Technical Information -->
+            <h5 class="mb-3">Technical Information</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="input_type" class="form-label">Input</label>
+                    <input type="text" class="form-control" id="input_type" name="input_type" value="NA">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="output_type" class="form-label">Output</label>
+                    <input type="text" class="form-control" id="output_type" name="output_type" value="NA">
+                </div>
+                
+                <div class="col-md-4 mb-3 solar-field">
+                    <label for="cell_capacity" class="form-label">Cell Capacity (GW)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="cell_capacity" name="cell_capacity" value="0">
+                </div>
+                <div class="col-md-4 mb-3 solar-field">
+                    <label for="module_capacity" class="form-label">Module Capacity (GW) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="module_capacity" name="module_capacity" value="0" required>
+                </div>
+                <div class="col-md-4 mb-3 solar-field">
+                    <label for="integration_capacity" class="form-label">Integration Capacity (GW)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="integration_capacity" name="integration_capacity" value="0">
+                </div>
+                
+                <div class="col-md-4 mb-3 battery-field" style="display: none;">
+                    <label for="cell_capacity" class="form-label">Cell Capacity (GWh)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="cell_capacity_battery" name="cell_capacity" value="0">
+                </div>
+                <div class="col-md-4 mb-3 battery-field" style="display: none;">
+                    <label for="module_capacity" class="form-label">Module Capacity (GWh) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="module_capacity_battery" name="module_capacity" value="0" required>
+                </div>
+                <div class="col-md-4 mb-3 battery-field" style="display: none;">
+                    <label for="integration_capacity" class="form-label">Integration Capacity (GWh)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="integration_capacity_battery" name="integration_capacity" value="0">
+                </div>
+            </div>
+
+            <!-- Status Information -->
+            <h5 class="mb-3">Status Information</h5>
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <label for="status" class="form-label">Project Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="Announced" selected>Announced</option>
+                        <option value="Planning">Planning</option>
+                        <option value="Land Acquisition">Land Acquisition</option>
+                        <option value="Under Construction">Under Construction</option>
+                        <option value="Commissioning">Commissioning</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="land_acquisition" class="form-label">Land Acquisition</label>
+                    <select class="form-select" id="land_acquisition" name="land_acquisition">
+                        <option value="NA" selected>Not Available</option>
+                        <option value="Not Started">Not Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="power_approval" class="form-label">Power Approval</label>
+                    <select class="form-select" id="power_approval" name="power_approval">
+                        <option value="NA" selected>Not Available</option>
+                        <option value="Not Started">Not Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="environment_clearance" class="form-label">Environment Clearance</label>
+                    <select class="form-select" id="environment_clearance" name="environment_clearance">
+                        <option value="NA" selected>Not Available</option>
+                        <option value="Not Started">Not Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="almm_listing" class="form-label">ALMM Listing</label>
+                    <select class="form-select" id="almm_listing" name="almm_listing">
+                        <option value="NA" selected>Not Available</option>
+                        <option value="Not Applied">Not Applied</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Listed">Listed</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Investment Information -->
+            <h5 class="mb-3">Investment and Timeline</h5>
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <label for="investment_usd" class="form-label">Investment (USD Million)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="investment_usd" name="investment_usd" value="0">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="investment_inr" class="form-label">Investment (INR Billion)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="investment_inr" name="investment_inr" value="0">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="expected_completion" class="form-label">Expected Completion</label>
+                    <input type="text" class="form-control" id="expected_completion" name="expected_completion" placeholder="e.g., 2024, Q2 2025" value="NA">
+                </div>
+            </div>
+
+            <!-- Source Information -->
+            <h5 class="mb-3">Source Information</h5>
+            <div class="row mb-4">
+                <div class="col-12 mb-3">
+                    <label for="source" class="form-label">Source URL</label>
+                    <input type="url" class="form-control" id="source" name="source" placeholder="https://example.com/article">
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="/projects" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Add Project</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle between solar and battery fields
+        const typeSelect = document.getElementById('type');
+        const solarFields = document.querySelectorAll('.solar-field');
+        const batteryFields = document.querySelectorAll('.battery-field');
+        
+        typeSelect.addEventListener('change', function() {
+            if (this.value === 'Solar') {
+                solarFields.forEach(field => field.style.display = 'block');
+                batteryFields.forEach(field => field.style.display = 'none');
+                
+                // Update input/output defaults for solar
+                document.getElementById('input_type').value = 'Cells';
+                document.getElementById('output_type').value = 'Modules';
+            } else if (this.value === 'Battery') {
+                solarFields.forEach(field => field.style.display = 'none');
+                batteryFields.forEach(field => field.style.display = 'block');
+                
+                // Update input/output defaults for battery
+                document.getElementById('input_type').value = 'Battery Materials';
+                document.getElementById('output_type').value = 'Cells, Modules';
+            }
+        });
+        
+        // Sync USD and INR investment values
+        const usdInput = document.getElementById('investment_usd');
+        const inrInput = document.getElementById('investment_inr');
+        
+        usdInput.addEventListener('input', function() {
+            // 1 USD = 82.5 INR (approximate)
+            // Convert USD Million to INR Billion
+            const usdValue = parseFloat(this.value) || 0;
+            const inrValue = (usdValue * 82.5) / 1000; // Convert to billions
+            inrInput.value = inrValue.toFixed(2);
+        });
+        
+        inrInput.addEventListener('input', function() {
+            // Convert INR Billion to USD Million
+            const inrValue = parseFloat(this.value) || 0;
+            const usdValue = (inrValue * 1000) / 82.5; // Convert to millions
+            usdInput.value = usdValue.toFixed(2);
+        });
+        
+        // Auto-sync cell capacity with module capacity for battery type
+        const moduleBatteryInput = document.getElementById('module_capacity_battery');
+        const cellBatteryInput = document.getElementById('cell_capacity_battery');
+        
+        moduleBatteryInput.addEventListener('input', function() {
+            cellBatteryInput.value = this.value;
+        });
+    });
+</script>
+{% endblock %}

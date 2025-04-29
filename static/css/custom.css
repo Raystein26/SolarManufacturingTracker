@@ -1,0 +1,138 @@
+/* Custom styles for India Renewable Projects Tracker */
+
+/* Dashboard widgets */
+.dashboard-widget {
+    border-radius: 8px;
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+.dashboard-widget:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Project cards */
+.project-card {
+    border-left: 4px solid var(--bs-primary);
+    transition: all 0.3s ease;
+}
+
+.project-card:hover {
+    transform: translateX(5px);
+}
+
+.project-card.solar {
+    border-left-color: var(--bs-warning);
+}
+
+.project-card.battery {
+    border-left-color: var(--bs-info);
+}
+
+/* Status badges */
+.status-announced {
+    background-color: var(--bs-purple);
+}
+
+.status-planning {
+    background-color: var(--bs-info);
+}
+
+.status-land-acquisition {
+    background-color: var(--bs-primary);
+}
+
+.status-under-construction {
+    background-color: var(--bs-warning);
+}
+
+.status-commissioning {
+    background-color: var(--bs-success);
+}
+
+/* Source cards */
+.source-card {
+    transition: all 0.3s ease;
+}
+
+.source-card:hover {
+    transform: scale(1.02);
+}
+
+/* Capacity indicators */
+.capacity-indicator {
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--bs-primary);
+}
+
+.capacity-indicator.solar {
+    background-color: var(--bs-warning);
+}
+
+.capacity-indicator.battery {
+    background-color: var(--bs-info);
+}
+
+/* Timeline for project status */
+.project-timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.project-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--bs-secondary);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -30px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--bs-gray);
+}
+
+.timeline-item.active::before {
+    background-color: var(--bs-success);
+}
+
+/* Map visualization */
+#india-map {
+    min-height: 400px;
+}
+
+/* Loader Animation */
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid var(--bs-secondary);
+    border-bottom-color: var(--bs-primary);
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

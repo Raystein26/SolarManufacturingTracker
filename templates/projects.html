@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if project_type == 'solar' %}
+        Solar Projects - India Renewable Manufacturing Tracker
+    {% elif project_type == 'battery' %}
+        Battery Projects - India Renewable Manufacturing Tracker
+    {% else %}
+        All Projects - India Renewable Manufacturing Tracker
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if project_type == 'solar' %}
+            <i class="fas fa-solar-panel text-warning me-2"></i> Solar Manufacturing Projects
+        {% elif project_type == 'battery' %}
+            <i class="fas fa-battery-three-quarters text-info me-2"></i> Battery Manufacturing Projects
+        {% else %}
+            <i class="fas fa-industry me-2"></i> All Manufacturing Projects
+        {% endif %}
+    </h2>
+    <div class="d-flex gap-2">
+        <select id="project-type-filter" class="form-select form-select-sm">
+            <option value="all" {% if project_type == 'all' %}selected{% endif %}>All Types</option>
+            <option value="solar" {% if project_type == 'solar' %}selected{% endif %}>Solar Only</option>
+            <option value="battery" {% if project_type == 'battery' %}selected{% endif %}>Battery Only</option>
+        </select>
+        <a href="/add-project" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus me-1"></i> Add Project
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <input type="text" id="search-projects" class="form-control" placeholder="Search by name, company, or location...">
+            </div>
+            <div class="col-md-3">
+                <select id="status-filter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Announced">Announced</option>
+                    <option value="Planning">Planning</option>
+                    <option value="Land Acquisition">Land Acquisition</option>
+                    <option value="Under Construction">Under Construction</option>
+                    <option value="Commissioning">Commissioning</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="state-filter" class="form-select">
+                    <option value="">All States</option>
+                    <!-- Dynamically generated from available data in JavaScript -->
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projects List -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="projects-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Company</th>
+                        <th>Type</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Capacity</th>
+                        <th>Investment</th>
+                        <th>Expected Completion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr class="project-row" data-id="{{ project.id }}">
+                        <td>{{ project.name }}</td>
+                        <td>{{ project.company }}</td>
+                        <td>
+                            <span class="badge {% if project.type == 'Solar' %}bg-warning{% else %}bg-info{% endif %}">
+                                {{ project.type }}
+                            </span>
+                        </td>
+                        <td>{{ project.state }}{% if project.location and project.location != 'NA' %}, {{ project.location }}{% endif %}</td>
+                        <td>
+                            <span class="badge status-{{ project.status|lower|replace(' ', '-') }}">
+                                {{ project.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if project.type == 'Solar' %}
+                                {{ project.module_capacity }} GW
+                            {% else %}
+                                {{ project.module_capacity }} GWh
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if project.investment_usd > 0 %}
+                                ${{ project.investment_usd }} M
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ project.expected_completion }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not projects %}
+        <div class="alert alert-info">
+            No projects found. You can add projects manually or run the data update to find new projects.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make table rows clickable to view project details
+        const projectRows = document.querySelectorAll('.project-row');
+        projectRows.forEach(row => {
+            row.addEventListener('click', function() {
+                const projectId = this.getAttribute('data-id');
+                window.location.href = '/project/' + projectId;
+            });
+            
+            // Add cursor style
+            row.style.cursor = 'pointer';
+        });
+        
+        // Populate state filter with available states
+        const stateFilter = document.getElementById('state-filter');
+        const states = new Set();
+        
+        projectRows.forEach(row => {
+            const location = row.querySelector('td:nth-child(4)').textContent;
+            if (location) {
+                const state = location.split(',')[0].trim();
+                if (state && state !== 'NA') {
+                    states.add(state);
+                }
+            }
+        });
+        
+        // Add states to filter dropdown
+        Array.from(states).sort().forEach(state => {
+            const option = document.createElement('option');
+            option.value = state;
+            option.textContent = state;
+            stateFilter.appendChild(option);
+        });
+        
+        // Search functionality
+        const searchInput = document.getElementById('search-projects');
+        searchInput.addEventListener('input', filterProjects);
+        
+        // Status filter
+        const statusFilter = document.getElementById('status-filter');
+        statusFilter.addEventListener('change', filterProjects);
+        
+        // State filter
+        stateFilter.addEventListener('change', filterProjects);
+        
+        function filterProjects() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const statusTerm = statusFilter.value;
+            const stateTerm = stateFilter.value;
+            
+            projectRows.forEach(row => {
+                const name = row.cells[0].textContent.toLowerCase();
+                const company = row.cells[1].textContent.toLowerCase();
+                const location = row.cells[3].textContent.toLowerCase();
+                const status = row.cells[4].textContent.trim();
+                const state = location.split(',')[0].trim();
+                
+                const matchesSearch = name.includes(searchTerm) || 
+                                     company.includes(searchTerm) || 
+                                     location.includes(searchTerm);
+                                     
+                const matchesStatus = !statusTerm || status.includes(statusTerm);
+                const matchesState = !stateTerm || state === stateTerm;
+                
+                if (matchesSearch && matchesStatus && matchesState) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
