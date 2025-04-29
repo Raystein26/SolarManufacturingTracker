@@ -155,8 +155,8 @@
                 <div class="row">
                     <div class="col-md-4 mb-3 mb-md-0">
                         <div class="d-grid">
-                            <button id="dashboard-manual-check-button" class="btn btn-primary" onclick="runManualCheck()">
-                                <i class="fas fa-sync-alt me-2"></i> Update Data
+                            <button id="manual-check-button" class="btn btn-primary" onclick="runManualCheck()">
+                                <i class="fas fa-sync-alt me-2"></i> Run Check Now
                             </button>
                         </div>
                     </div>
@@ -185,7 +185,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize dashboard buttons
-        document.getElementById('dashboard-manual-check-button').addEventListener('click', function() {
+        document.getElementById('manual-check-button').addEventListener('click', function() {
             runManualCheck();
         });
         
