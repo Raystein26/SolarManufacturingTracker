@@ -2,6 +2,7 @@ import logging
 import time
 import datetime
 import threading
+from app import app
 from project_tracker import check_all_sources
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,8 @@ except ImportError:
 def run_scheduled_task():
     """Run the scheduled task to check all sources"""
     logger.info("Running scheduled check of all sources")
-    check_all_sources()
+    with app.app_context():
+        check_all_sources()
     logger.info("Scheduled check complete")
 
 

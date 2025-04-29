@@ -2,7 +2,7 @@ import os
 import logging
 import time
 import datetime
-from app import db
+from app import app, db
 from models import Project, Source, NewsArticle, ScrapeLog
 from scraper import fetch_news_from_source, extract_article_content, extract_project_data
 
@@ -224,7 +224,8 @@ def run_manual_check():
     """Run a manual check of all sources (for API endpoint)"""
     try:
         logger.info("Starting manual check of all sources")
-        check_all_sources()
+        with app.app_context():
+            check_all_sources()
         return {"status": "success", "message": "Completed check of all sources"}
     except Exception as e:
         logger.error(f"Error in manual check: {str(e)}")
