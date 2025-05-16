@@ -44,7 +44,14 @@ DEFAULT_SOURCES = [
     "https://www.pv-tech.org/",
     "https://energy.economictimes.indiatimes.com/",
     "https://www.business-standard.com/industry/news/power",
-    "https://www.livemint.com/industry/energy"
+    "https://www.livemint.com/industry/energy",
+    "https://www.solarquarter.com/",
+    "https://www.financialexpress.com/industry/",
+    "https://www.thehindubusinessline.com/economy/",
+    "https://www.renews.biz/regions/india/",
+    "https://indianexpress.com/section/business/",
+    "https://www.eqmagpro.com/",
+    "https://www.cnbctv18.com/cleantech/"
 ]
 
 def initialize_sources():

@@ -22,12 +22,19 @@ except ImportError:
 # Keywords to track
 SOLAR_KEYWORDS = [
     "solar module", "solar manufacturing", "solar cell", "pv manufacturing", 
-    "photovoltaic production", "solar facility", "module plant"
+    "photovoltaic production", "solar facility", "module plant", "solar panel factory",
+    "solar capacity", "pv module", "solar factory", "solar panel production",
+    "solar manufacturing plant", "cell production", "gw solar", "polysilicon",
+    "wafer production", "ingot production", "solar manufacturing hub"
 ]
 
 BATTERY_KEYWORDS = [
     "battery manufacturing", "battery cell", "battery module", 
-    "energy storage manufacturing", "gigafactory", "battery production"
+    "energy storage manufacturing", "gigafactory", "battery production",
+    "lithium-ion", "cell manufacturing", "battery plant", "cell facility",
+    "battery storage", "energy storage system", "gwh capacity", "battery pack",
+    "advanced cell chemistry", "acc", "cathode production", "anode manufacturing",
+    "battery materials", "cell assembly", "battery recycling"
 ]
 
 
