@@ -39,7 +39,7 @@ BATTERY_KEYWORDS = [
 
 
 def fetch_news_from_source(source_url):
-    """Fetch news articles from a source website"""
+    """Fetch news articles from a source website with enhanced search"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -51,24 +51,118 @@ def fetch_news_from_source(source_url):
         
         # Find all links that might be news articles
         links = []
+        category_links = []
+        
+        # Step 1: Process home page links
         for a in soup.find_all('a', href=True):
             link = a['href']
+            
+            # Fix relative URLs
             if not link.startswith('http'):
                 if link.startswith('/'):
                     link = source_url.rstrip('/') + link
                 else:
+                    # Skip javascript and anchor links
+                    if link.startswith('#') or link.startswith('javascript:'):
+                        continue
                     link = source_url.rstrip('/') + '/' + link
             
-            # Check if it's a news article link (heuristic)
-            if any(term in link.lower() for term in ['article', 'news', 'story', '/20', 'renewable']):
+            # Skip social media and utility links
+            if any(domain in link.lower() for domain in [
+                'facebook.com', 'twitter.com', 'linkedin.com', 'instagram.com',
+                'youtube.com', 'mailto:', 'whatsapp'
+            ]):
+                continue
+            
+            # Extract domain from source url
+            source_domain = urlparse(source_url).netloc
+            link_domain = urlparse(link).netloc
+            
+            # Only follow links from same domain or subdomains
+            if source_domain not in link_domain:
+                continue
+            
+            # Identify category pages for further exploration
+            if any(term in link.lower() for term in [
+                '/category/', '/section/', '/topics/', '/tag/', '/renewable-energy/',
+                '/solar-energy/', '/energy-storage/', '/manufacturing/', '/india/'
+            ]):
+                category_links.append(link)
+                
+            # Check if it's likely a news article
+            article_indicators = [
+                'article', 'news', 'story', '/20', 'renewable', 'solar', 'battery', 
+                'energy', 'manufacturing', 'gigafactory', 'production', 'capacity'
+            ]
+            
+            # Enhanced article detection
+            if any(term in link.lower() for term in article_indicators):
                 # Avoid common non-article paths
                 if not any(term in link.lower() for term in [
-                    'category', 'tag', 'author', 'about', 'contact', 'privacy', 
-                    'terms', 'login', 'register', 'subscribe', 'newsletter'
+                    'about', 'contact', 'privacy', 'terms', 'login', 
+                    'register', 'subscribe', 'newsletter'
                 ]):
                     links.append(link)
         
-        return list(set(links))  # Remove duplicates
+        # Step 2: Follow category pages to find more articles (up to 5 category pages)
+        category_links = list(set(category_links))[:5]  # Deduplicate and limit
+        
+        for category_url in category_links:
+            try:
+                cat_response = requests.get(category_url, headers=headers, timeout=10)
+                cat_response.raise_for_status()
+                cat_soup = BeautifulSoup(cat_response.text, 'html.parser')
+                
+                # Find articles on category page
+                for a in cat_soup.find_all('a', href=True):
+                    link = a['href']
+                    
+                    # Fix relative URLs
+                    if not link.startswith('http'):
+                        if link.startswith('/'):
+                            link = source_url.rstrip('/') + link
+                        else:
+                            # Skip javascript and anchor links
+                            if link.startswith('#') or link.startswith('javascript:'):
+                                continue
+                            link = source_url.rstrip('/') + '/' + link
+                    
+                    # Skip social media links
+                    if any(domain in link.lower() for domain in [
+                        'facebook.com', 'twitter.com', 'linkedin.com', 'instagram.com',
+                        'youtube.com', 'mailto:', 'whatsapp'
+                    ]):
+                        continue
+                    
+                    # Extract domain from source url
+                    source_domain = urlparse(source_url).netloc
+                    link_domain = urlparse(link).netloc
+                    
+                    # Only follow links from same domain or subdomains
+                    if source_domain not in link_domain:
+                        continue
+                    
+                    # Check if it's likely a news article (same criteria as above)
+                    article_indicators = [
+                        'article', 'news', 'story', '/20', 'renewable', 'solar', 'battery', 
+                        'energy', 'manufacturing', 'gigafactory', 'production', 'capacity'
+                    ]
+                    
+                    if any(term in link.lower() for term in article_indicators):
+                        # Avoid common non-article paths
+                        if not any(term in link.lower() for term in [
+                            'about', 'contact', 'privacy', 'terms', 'login', 
+                            'register', 'subscribe', 'newsletter'
+                        ]):
+                            links.append(link)
+                            
+            except Exception as e:
+                logger.warning(f"Error fetching category page {category_url}: {str(e)}")
+        
+        # Deduplicate and return
+        links = list(set(links))
+        logger.info(f"Found {len(links)} potential article links at {source_url}")
+        return links
     
     except Exception as e:
         logger.error(f"Error fetching from {source_url}: {str(e)}")
