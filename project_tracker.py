@@ -51,7 +51,11 @@ DEFAULT_SOURCES = [
     "https://www.renews.biz/regions/india/",
     "https://indianexpress.com/section/business/",
     "https://www.eqmagpro.com/",
-    "https://www.cnbctv18.com/cleantech/"
+    "https://www.cnbctv18.com/cleantech/",
+    "https://economictimes.indiatimes.com/industry/renewables",
+    "https://www.moneycontrol.com/news/business/economy/energy",
+    "https://www.bloomberg.com/india/topics/energy",
+    "https://pib.gov.in/PressReleasePage.aspx?PRID="
 ]
 
 def initialize_sources():
@@ -280,11 +284,26 @@ def check_all_sources():
 
 def run_manual_check():
     """Run a manual check of all sources (for API endpoint)"""
+    global progress
+    
+    # Reset the progress tracker
+    progress.reset()
+    
     try:
         logger.info("Starting manual check of all sources")
         with app.app_context():
+            # First make sure all sources are properly initialized
+            # This ensures new sources are added to the database
+            initialize_sources()
+            logger.info("Sources initialized, beginning source check")
+            
+            # Then check all sources for new content
             check_all_sources()
+            
+        # Mark as completed
+        progress.complete()
         return {"status": "success", "message": "Completed check of all sources"}
     except Exception as e:
         logger.error(f"Error in manual check: {str(e)}")
+        progress.complete()  # Mark as completed even on error
         return {"status": "error", "message": str(e)}
