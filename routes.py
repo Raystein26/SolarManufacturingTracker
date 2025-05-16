@@ -127,24 +127,11 @@ def api_sources():
         'status': source.status
     } for source in sources])
 
-# Global variables to track scraping progress
-scraping_in_progress = False
-processed_sources = 0
-total_sources = 0
-projects_added_count = 0
-scraping_completed = False
-
 @app.route('/api/run-check', methods=['POST'])
 def api_run_check():
-    global scraping_in_progress, processed_sources, total_sources, projects_added_count, scraping_completed
-    
     try:
-        # Reset progress tracking variables
-        scraping_in_progress = True
-        processed_sources = 0
-        total_sources = Source.query.count()
-        projects_added_count = 0
-        scraping_completed = False
+        # Import here to avoid circular imports
+        from project_tracker import progress
         
         # Run the check in a background thread
         thread = threading.Thread(target=run_check_with_progress)
@@ -153,38 +140,36 @@ def api_run_check():
         return jsonify({'status': 'success', 'message': 'Check started in background'})
     except Exception as e:
         logger.error(f"Error starting manual check: {str(e)}")
-        scraping_in_progress = False
         return jsonify({'status': 'error', 'message': str(e)})
 
 def run_check_with_progress():
     """Run manual check with progress tracking"""
-    global scraping_in_progress, processed_sources, projects_added_count, scraping_completed
-    
     try:
         # Get the result from the manual check
         result = run_manual_check()
-        
-        # Update completed status
-        scraping_completed = True
-        scraping_in_progress = False
         return result
     except Exception as e:
         logger.error(f"Error in run_check_with_progress: {str(e)}")
-        scraping_in_progress = False
-        scraping_completed = True
+        # Import here to avoid circular imports
+        from project_tracker import progress
+        progress.complete()  # Mark as completed even on error
         return {"status": "error", "message": str(e)}
 
 @app.route('/api/check-progress', methods=['GET'])
 def api_check_progress():
     """Get the current progress of the scraping process"""
-    global scraping_in_progress, processed_sources, total_sources, projects_added_count, scraping_completed
+    # Import here to avoid circular imports
+    from project_tracker import progress
+    
+    # Get the total sources count
+    total_sources = Source.query.count()
     
     return jsonify({
-        'in_progress': scraping_in_progress,
-        'processed_sources': processed_sources,
+        'in_progress': progress.is_in_progress,
+        'processed_sources': progress.processed_sources,
         'total_sources': total_sources,
-        'projects_added': projects_added_count,
-        'completed': scraping_completed
+        'projects_added': progress.projects_added,
+        'completed': progress.is_completed
     })
 
 @app.route('/api/export-excel', methods=['GET'])

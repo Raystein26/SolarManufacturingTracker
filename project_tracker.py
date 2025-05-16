@@ -74,7 +74,7 @@ def initialize_sources():
 
 def check_source(source):
     """Check a source for new articles and projects"""
-    global processed_sources, projects_added_count
+    global progress
     
     start_time = time.time()
     
@@ -192,6 +192,7 @@ def check_source(source):
                     db.session.add(new_project)
                     db.session.commit()
                     projects_added += 1
+                    progress.add_projects(1)  # Update the progress tracker
                     logger.info(f"Added new project: {new_project.name} from {article_url}")
             
             # Mark article as processed
@@ -231,6 +232,8 @@ def check_source(source):
 
 def check_all_sources():
     """Check all sources for new articles and projects"""
+    global progress
+    
     initialize_sources()  # Make sure we have sources to check
     
     logger.info("Starting check of all sources")
@@ -240,13 +243,20 @@ def check_all_sources():
     
     if not sources:
         logger.warning("No sources found in database")
+        progress.complete()
         return
+    
+    # Reset progress tracker
+    progress.reset()
     
     # Process each source
     for source in sources:
         check_source(source)
+        progress.increment_source()  # Update progress tracker
         time.sleep(5)  # Small delay between sources to avoid overloading
     
+    # Mark as completed
+    progress.complete()
     logger.info("Completed check of all sources")
 
 
