@@ -24,22 +24,31 @@ except ImportError:
     logger.warning("newspaper3k not available, using fallback extraction method")
 
 
-# Keywords to track
+# Keywords to track - STRICT MANUFACTURING FOCUS ONLY
 SOLAR_KEYWORDS = [
-    "solar module", "solar manufacturing", "solar cell", "pv manufacturing", 
-    "photovoltaic production", "solar facility", "module plant", "solar panel factory",
-    "solar capacity", "pv module", "solar factory", "solar panel production",
-    "solar manufacturing plant", "cell production", "gw solar", "polysilicon",
-    "wafer production", "ingot production", "solar manufacturing hub"
+    "solar module manufacturing", "solar cell manufacturing", "pv manufacturing facility", 
+    "photovoltaic production line", "solar panel factory", "module manufacturing plant",
+    "solar manufacturing capacity", "solar factory", "solar panel production line",
+    "solar manufacturing facility", "cell production capacity", "gw cell production",
+    "solar ingot production", "wafer manufacturing", "solar manufacturing hub",
+    "integrated solar manufacturing", "solar gigafactory", "module assembly line"
 ]
 
 BATTERY_KEYWORDS = [
-    "battery manufacturing", "battery cell", "battery module", 
-    "energy storage manufacturing", "gigafactory", "battery production",
-    "lithium-ion", "cell manufacturing", "battery plant", "cell facility",
-    "battery storage", "energy storage system", "gwh capacity", "battery pack",
-    "advanced cell chemistry", "acc", "cathode production", "anode manufacturing",
-    "battery materials", "cell assembly", "battery recycling"
+    "battery cell manufacturing", "battery production facility", 
+    "energy storage manufacturing plant", "battery gigafactory", "lithium battery production",
+    "lithium-ion factory", "cell manufacturing line", "battery plant construction",
+    "battery factory", "gwh manufacturing capacity", "battery cell production line",
+    "advanced cell chemistry factory", "cathode production facility", "anode manufacturing plant",
+    "battery materials plant", "cell assembly line", "battery manufacturing hub"
+]
+
+# Terms that strongly indicate article is NOT about manufacturing
+EXCLUDE_KEYWORDS = [
+    "exam result", "cricket match", "movie release", "election", "recipe", "weather forecast",
+    "stock market", "fashion", "lifestyle", "sports", "entertainment", "crime", "accident",
+    "covid", "smartphone review", "opinion", "editorial", "viewpoint", "interview",
+    "holiday", "festival", "politics", "cabinet", "minister", "parliament", "court case"
 ]
 
 
@@ -467,48 +476,82 @@ def is_pipeline_project(text):
 
 
 def determine_project_type(text):
-    """Determine if the article is about a solar or battery project with enhanced detection"""
+    """Determine if the article is about a solar or battery manufacturing project with strict filtering"""
     text_lower = text.lower()
     
-    # Additional solar keywords for more comprehensive detection
-    expanded_solar_keywords = SOLAR_KEYWORDS + [
-        "photovoltaic", "pv module", "solar power", "solar project", 
-        "solar installation", "solar panel", "solar industry", "solar technology",
-        "solar energy", "crystalline silicon", "mono perc", "polysilicon",
-        "ingot", "wafer", "module assembly", "solar glass", "solar cells"
+    # CRITICAL CHECK: Article MUST contain manufacturing-specific keywords
+    manufacturing_terms = [
+        "manufacturing", "factory", "production", "facility", "plant", "gw capacity", 
+        "manufacturing hub", "production line", "manufacturing unit"
     ]
     
-    # Additional battery keywords for more comprehensive detection
-    expanded_battery_keywords = BATTERY_KEYWORDS + [
-        "energy storage", "lithium ion", "li-ion", "battery cell", "battery tech",
-        "battery storage", "energy storage system", "ess", "bess", "lto", "lfp",
-        "lithium iron phosphate", "lithium titanate", "nmc", "cathode", "anode",
-        "advanced chemistry cell", "acc", "electrolyte", "cell manufacturing"
+    # FIRST CHECK: Article must contain manufacturing keywords
+    if not any(term in text_lower for term in manufacturing_terms):
+        logger.info("Article lacks manufacturing focus")
+        return None
+    
+    # SECOND CHECK: Article must contain capacity indicators
+    capacity_pattern = r'\d+(?:\.\d+)?\s*(?:GW|MW|GWh|MWh)'
+    has_capacity = re.search(capacity_pattern, text, re.IGNORECASE) is not None
+    
+    # Or investment indicators
+    investment_pattern = r'(?:invest|funding|investment).*?(?:Rs\.?|INR|\$|USD|crore|billion)\s*\d+'
+    has_investment = re.search(investment_pattern, text, re.IGNORECASE) is not None
+    
+    if not (has_capacity or has_investment):
+        logger.info("Article lacks specific capacity or investment details")
+        return None
+    
+    # Only if article passes manufacturing and capacity/investment checks, proceed with classification
+    
+    # STRICT SOLAR KEYWORDS - manufacturing specific only
+    strict_solar_keywords = [
+        "solar cell manufacturing", "solar module production", "pv manufacturing facility",
+        "solar panel factory", "module manufacturing", "solar gigafactory", 
+        "solar manufacturing capacity", "wafer production", "cell production line",
+        "gw module capacity", "gw cell capacity", "solar cell factory"
+    ]
+    
+    # STRICT BATTERY KEYWORDS - manufacturing specific only
+    strict_battery_keywords = [
+        "battery manufacturing", "battery factory", "cell production",
+        "gigafactory", "battery cell facility", "energy storage manufacturing",
+        "lithium-ion production", "gwh battery capacity", "battery manufacturing hub",
+        "battery cell production", "cell manufacturing line", "battery plant"
     ]
     
     # Count keyword occurrences with weighted matching (whole words get more weight)
-    solar_count = 0
-    for keyword in expanded_solar_keywords:
-        if f" {keyword} " in f" {text_lower} ":  # Exact/whole word match
-            solar_count += 2
+    solar_score = 0
+    for keyword in strict_solar_keywords:
+        if f" {keyword} " in f" {text_lower} ":  # Exact match
+            solar_score += 3  # Higher weight for exact matches
         elif keyword in text_lower:  # Partial match
-            solar_count += 1
+            solar_score += 1
     
-    battery_count = 0
-    for keyword in expanded_battery_keywords:
-        if f" {keyword} " in f" {text_lower} ":  # Exact/whole word match
-            battery_count += 2
+    battery_score = 0
+    for keyword in strict_battery_keywords:
+        if f" {keyword} " in f" {text_lower} ":  # Exact match
+            battery_score += 3  # Higher weight for exact matches
         elif keyword in text_lower:  # Partial match
-            battery_count += 1
+            battery_score += 1
     
-    # Determine project type based on keyword counts
-    if solar_count > battery_count:
-        return "Solar"  # Capitalize for consistency with database
-    elif battery_count > solar_count:
-        return "Battery"  # Capitalize for consistency with database
-    elif solar_count > 0:  # If tied but solar terms exist
+    # THIRD CHECK: Scores must exceed minimum threshold to be considered valid
+    MIN_SCORE_THRESHOLD = 3
+    
+    if solar_score < MIN_SCORE_THRESHOLD and battery_score < MIN_SCORE_THRESHOLD:
+        logger.info(f"Article doesn't have enough specific keywords (Solar: {solar_score}, Battery: {battery_score})")
+        return None
+    
+    # Determine project type based on keyword scores
+    if solar_score > battery_score:
+        logger.info(f"Identified SOLAR manufacturing project (score: {solar_score})")
         return "Solar"
-    elif battery_count > 0:  # If tied but battery terms exist
+    elif battery_score > solar_score:
+        logger.info(f"Identified BATTERY manufacturing project (score: {battery_score})")
+        return "Battery"
+    elif solar_score > 0:  # If tied but solar terms exist
+        return "Solar"
+    elif battery_score > 0:  # If tied but battery terms exist
         return "Battery"
     else:
         return None  # Not a relevant project
