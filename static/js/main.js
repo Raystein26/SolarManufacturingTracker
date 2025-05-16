@@ -165,12 +165,18 @@ function exportToExcel() {
         const alertsContainer = document.getElementById('alerts-container');
         
         if (data.status === 'success') {
+            // Create an absolute URL for the download
+            const downloadUrl = window.location.origin + data.filename;
+            
             alertsContainer.innerHTML = `
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    Export successful! <a href="${data.filename}" download class="alert-link">Download Excel File</a>
+                    Export successful! <a href="${downloadUrl}" class="alert-link">Download Excel File</a>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `;
+            
+            // Automatically open the download in a new window/tab
+            window.open(downloadUrl, '_blank');
         } else {
             alertsContainer.innerHTML = `
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">

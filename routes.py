@@ -1,3 +1,4 @@
+import flask
 from flask import render_template, request, jsonify, flash, redirect, url_for
 from app import app, db, logger
 from models import Project, Source, NewsArticle, ScrapeLog
@@ -176,9 +177,24 @@ def api_check_progress():
 def api_export_excel():
     try:
         filename = export_to_excel()
-        return jsonify({'status': 'success', 'filename': filename})
+        # Return the file path so frontend knows where to download from
+        return jsonify({'status': 'success', 'filename': f'/download-excel/{filename}'})
     except Exception as e:
         logger.error(f"Error exporting to Excel: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/download-excel/<path:filename>', methods=['GET'])
+def download_excel(filename):
+    """Download the generated Excel file"""
+    try:
+        # Return the Excel file as an attachment
+        return flask.send_from_directory(
+            directory=".",  # Current directory where the file is saved
+            path=filename,
+            as_attachment=True
+        )
+    except Exception as e:
+        logger.error(f"Error downloading Excel file: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/import-excel', methods=['POST'])
