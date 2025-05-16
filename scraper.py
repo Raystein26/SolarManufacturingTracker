@@ -342,39 +342,72 @@ def calculate_similarity(text1, text2):
         return 0.0
 
 def is_india_project(text):
-    """Check if the article is about an Indian project using NLP techniques"""
+    """Check if the article is about an Indian project using enhanced NLP techniques
+    Returns a score between 0 and 1 indicating confidence"""
     if not text:
-        return False
+        return 0.0
         
-    india_terms = [
-        'india', 'indian', 'gujarat', 'maharashtra', 'tamil nadu', 
-        'karnataka', 'telangana', 'rajasthan', 'uttar pradesh',
-        'madhya pradesh', 'andhra pradesh', 'delhi', 'mumbai', 
-        'bengaluru', 'chennai', 'hyderabad', 'ahmedabad', 'pune',
-        'kolkata', 'jaipur', 'lucknow', 'nagpur', 'surat', 'indore',
-        'odisha', 'bihar', 'jharkhand', 'chandigarh', 'haryana',
-        'inr', 'rupees', 'crore', 'lakh', 'bharat', 'niti aayog', 'mnre',
-        'ministry of new and renewable energy', 'nhai', 'ntpc', 'seci',
-        'solar energy corporation of india', 'coal india', 'power grid'
+    # Enhanced list of India-related terms with categorization
+    primary_india_terms = [
+        'india', 'indian', 'mnre', 'pli scheme', 'ministry of new and renewable energy',
+        'made in india', 'make in india', 'pm-kusum', 'national solar mission',
+        'atmanirbhar bharat', 'seci', 'solar energy corporation of india'
     ]
     
+    secondary_india_terms = [
+        'gujarat', 'maharashtra', 'tamil nadu', 'karnataka', 'telangana', 
+        'rajasthan', 'uttar pradesh', 'madhya pradesh', 'andhra pradesh', 
+        'delhi', 'mumbai', 'bengaluru', 'chennai', 'hyderabad', 'ahmedabad', 
+        'pune', 'kolkata', 'jaipur', 'lucknow', 'nagpur', 'surat', 'indore',
+        'odisha', 'bihar', 'jharkhand', 'chandigarh', 'haryana', 'uttarakhand',
+        'inr', 'rupees', 'crore', 'lakh', 'bharat', 'niti aayog', 'nhai', 
+        'ntpc', 'coal india', 'power grid'
+    ]
+    
+    # Expanded list of Indian renewable energy companies
     indian_companies = [
         'tata', 'reliance', 'adani', 'birla', 'mahindra', 'bajaj', 
         'infosys', 'wipro', 'bhel', 'ntpc', 'ongc', 'iocl', 'gail', 
         'l&t', 'larsen', 'hindalco', 'jindal', 'suzlon', 'renew power', 
         'azure power', 'hero', 'waaree', 'vikram solar', 'premier energies',
         'goldi solar', 'websol', 'emmvee', 'reliance solar', 'adani solar',
-        'tata power solar', 'luminous', 'panasonic india', 'havells'
+        'tata power solar', 'luminous', 'panasonic india', 'havells',
+        'avaada', 'acme solar', 'amp energy', 'amplus solar', 'greenко',
+        'hfele india', 'first solar india', 'mundra solar', 'solex energy',
+        'loom solar', 'insolation energy', 'alpex solar', 'ray power',
+        'amara raja', 'exide', 'tata chemicals', 'isgec heavy engineering'
     ]
     
     text_lower = text.lower()
+    score = 0.0
     
-    # Method 1: Direct keyword matching
-    direct_match = (any(term in text_lower for term in india_terms) or 
-                   any(company in text_lower for company in indian_companies))
+    # Method 1: Weighted keyword matching
+    # Primary terms have higher weight (strong indicators of Indian projects)
+    for term in primary_india_terms:
+        if f" {term} " in f" {text_lower} ":  # Exact match
+            score += 0.5
+            break  # One strong match is sufficient
+        elif term in text_lower:  # Partial match
+            score += 0.3
+            break
     
-    if direct_match:
-        return True
+    # Secondary terms provide supporting evidence
+    for term in secondary_india_terms:
+        if f" {term} " in f" {text_lower} ":  # Exact match
+            score += 0.3
+            break
+        elif term in text_lower:  # Partial match
+            score += 0.2
+            break
+    
+    # Company names provide additional supporting evidence
+    for company in indian_companies:
+        if f" {company} " in f" {text_lower} ":  # Exact match
+            score += 0.2
+            break
+        elif company in text_lower:  # Partial match
+            score += 0.1
+            break
     
     # Method 2: NLP-based analysis for better accuracy
     try:
@@ -384,13 +417,13 @@ def is_india_project(text):
         # Calculate semantic similarity
         similarity_score = calculate_similarity(text_lower, india_reference)
         
-        # High similarity indicates India-related content
-        if similarity_score > 0.2:  # Threshold determined empirically
-            return True
+        # Add scaled similarity score to total
+        score += similarity_score * 0.3  # Weight the similarity score appropriately
     except Exception as e:
         logger.warning(f"NLP analysis failed: {str(e)}")
     
-    return False
+    # Cap the score at 1.0
+    return min(score, 1.0)
 
 
 def is_pipeline_project(text):
