@@ -75,6 +75,7 @@
                         <th>Capacity</th>
                         <th>Investment</th>
                         <th>Expected Completion</th>
+                        <th>Source</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -108,6 +109,18 @@
                             {% endif %}
                         </td>
                         <td>{{ project.expected_completion }}</td>
+                        <td>
+                            {% if project.source %}
+                                <a href="{{ project.source }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 180px;" title="{{ project.source }}">
+                                    <i class="fas fa-link me-1"></i> Source
+                                </a>
+                                {% if project.created_at %}
+                                <small class="d-block text-muted">Added: {{ project.created_at.strftime('%d %b %Y') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -158,6 +158,13 @@
                             <button id="manual-check-button" class="btn btn-primary" onclick="runManualCheck()">
                                 <i class="fas fa-sync-alt me-2"></i> Run Check Now
                             </button>
+                            <div id="update-progress-container" class="mt-2" style="display: none;">
+                                <div class="progress" style="height: 10px;">
+                                    <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small id="update-progress-text" class="text-muted">Processing sources: 0/0</small>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3 mb-md-0">

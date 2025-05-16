@@ -37,9 +37,17 @@ function runManualCheck() {
     // Show loading state
     const button = document.getElementById('manual-check-button');
     const originalText = button.innerHTML;
+    const progressContainer = document.getElementById('update-progress-container');
+    const progressBar = document.getElementById('update-progress-bar');
+    const progressText = document.getElementById('update-progress-text');
     
     button.disabled = true;
     button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Running...';
+    
+    // Show progress container
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Initializing...';
     
     // Make API call to run check
     fetch('/api/run-check', {
@@ -60,7 +68,48 @@ function runManualCheck() {
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `;
+            
+            // Start progress checking
+            let sourceCount = 0;
+            let processedCount = 0;
+            let progressInterval;
+            
+            // Get the total number of sources first
+            fetch('/api/sources')
+                .then(response => response.json())
+                .then(sources => {
+                    sourceCount = sources.length;
+                    progressText.textContent = `Processing sources: 0/${sourceCount}`;
+                    
+                    // Check progress periodically
+                    progressInterval = setInterval(() => {
+                        fetch('/api/check-progress')
+                            .then(response => response.json())
+                            .then(progress => {
+                                if (progress.completed) {
+                                    clearInterval(progressInterval);
+                                    progressBar.style.width = '100%';
+                                    progressText.textContent = `Completed: ${progress.processed_sources}/${sourceCount} sources, ${progress.projects_added} projects added`;
+                                    
+                                    setTimeout(() => {
+                                        // Hide progress after a delay
+                                        progressContainer.style.display = 'none';
+                                    }, 5000);
+                                } else {
+                                    processedCount = progress.processed_sources;
+                                    const percent = Math.round((processedCount / sourceCount) * 100);
+                                    progressBar.style.width = `${percent}%`;
+                                    progressText.textContent = `Processing sources: ${processedCount}/${sourceCount}, ${progress.projects_added} projects added`;
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error checking progress:', error);
+                            });
+                    }, 2000); // Check every 2 seconds
+                });
         } else {
+            progressContainer.style.display = 'none';
+            
             alertsContainer.innerHTML = `
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     Error: ${data.message}
@@ -75,6 +124,8 @@ function runManualCheck() {
     })
     .catch(error => {
         // Show error message
+        progressContainer.style.display = 'none';
+        
         const alertsContainer = document.getElementById('alerts-container');
         alertsContainer.innerHTML = `
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
