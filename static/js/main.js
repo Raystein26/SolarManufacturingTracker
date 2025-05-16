@@ -36,10 +36,15 @@ document.addEventListener('DOMContentLoaded', function() {
 function runManualCheck() {
     // Show loading state
     const button = document.getElementById('manual-check-button');
+    if (!button) return; // Exit if button isn't found
+    
     const originalText = button.innerHTML;
     const progressContainer = document.getElementById('update-progress-container');
     const progressBar = document.getElementById('update-progress-bar');
     const progressText = document.getElementById('update-progress-text');
+    
+    // Check if the progress elements exist
+    if (!progressContainer || !progressBar || !progressText) return;
     
     button.disabled = true;
     button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Running...';
