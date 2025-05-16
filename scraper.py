@@ -287,11 +287,28 @@ def is_india_project(text):
         'india', 'indian', 'gujarat', 'maharashtra', 'tamil nadu', 
         'karnataka', 'telangana', 'rajasthan', 'uttar pradesh',
         'madhya pradesh', 'andhra pradesh', 'delhi', 'mumbai', 
-        'bengaluru', 'chennai', 'hyderabad', 'ahmedabad', 'pune'
+        'bengaluru', 'chennai', 'hyderabad', 'ahmedabad', 'pune',
+        'kolkata', 'jaipur', 'lucknow', 'nagpur', 'surat', 'indore',
+        'odisha', 'bihar', 'jharkhand', 'chandigarh', 'haryana',
+        'inr', 'rupees', 'crore', 'lakh', 'bharat', 'niti aayog', 'mnre',
+        'ministry of new and renewable energy', 'nhai', 'ntpc', 'seci',
+        'solar energy corporation of india', 'coal india', 'power grid'
+    ]
+    
+    indian_companies = [
+        'tata', 'reliance', 'adani', 'birla', 'mahindra', 'bajaj', 
+        'infosys', 'wipro', 'bhel', 'ntpc', 'ongc', 'iocl', 'gail', 
+        'l&t', 'larsen', 'hindalco', 'jindal', 'suzlon', 'renew power', 
+        'azure power', 'hero', 'waaree', 'vikram solar', 'premier energies',
+        'goldi solar', 'websol', 'emmvee', 'reliance solar', 'adani solar',
+        'tata power solar', 'luminous', 'panasonic india', 'havells'
     ]
     
     text_lower = text.lower()
-    return any(term in text_lower for term in india_terms)
+    
+    # Check for India terms or Indian companies
+    return (any(term in text_lower for term in india_terms) or 
+            any(company in text_lower for company in indian_companies))
 
 
 def is_pipeline_project(text):
@@ -299,37 +316,85 @@ def is_pipeline_project(text):
     pipeline_terms = [
         'announced', 'plan', 'to set up', 'will build', 'to construct',
         'to establish', 'under construction', 'building', 'developing',
-        'in the works', 'upcoming', 'proposed', 'investment', 'breaking ground'
+        'in the works', 'upcoming', 'proposed', 'investment', 'breaking ground',
+        'to invest', 'investing', 'capacity addition', 'new facility',
+        'expansion', 'planned', 'to launch', 'to start', 'beginning', 
+        'initiative', 'signing agreement', 'mou signed', 'partnership',
+        'memorandum of understanding', 'joint venture', 'jv', 'pact',
+        'tender', 'bid', 'awarded', 'contract', 'secured order'
     ]
     
     not_deployed_terms = [
         'operational', 'commissioned', 'completed', 'inaugurated',
-        'opened', 'functioning', 'went online', 'now running'
+        'opened', 'functioning', 'went online', 'now running',
+        'already operating', 'fully functional', 'generating power',
+        'producing', 'current output', 'in operation'
+    ]
+    
+    # Capacity and investment terms indicate a project regardless of stage
+    project_indicators = [
+        'mw', 'gw', 'gwh', 'mwh', 'megawatt', 'gigawatt', 'million', 'billion',
+        'capacity', 'crore', 'factory', 'manufacturing plant', 'production facility',
+        'inr', 'usd', 'rupees', 'investment', 'funding'
     ]
     
     text_lower = text.lower()
     
+    # Check standard pipeline terms
     is_pipeline = any(term in text_lower for term in pipeline_terms)
     is_not_deployed = not any(term in text_lower for term in not_deployed_terms)
     
-    return is_pipeline and is_not_deployed
+    # Check for project indicators even if standard pipeline terms aren't found
+    has_project_indicators = any(indicator in text_lower for indicator in project_indicators)
+    
+    # Return true if it's clearly in pipeline OR has project indicators but isn't deployed
+    return (is_pipeline and is_not_deployed) or (has_project_indicators and is_not_deployed)
 
 
 def determine_project_type(text):
-    """Determine if the article is about a solar or battery project"""
+    """Determine if the article is about a solar or battery project with enhanced detection"""
     text_lower = text.lower()
     
-    solar_count = sum(1 for keyword in SOLAR_KEYWORDS if keyword in text_lower)
-    battery_count = sum(1 for keyword in BATTERY_KEYWORDS if keyword in text_lower)
+    # Additional solar keywords for more comprehensive detection
+    expanded_solar_keywords = SOLAR_KEYWORDS + [
+        "photovoltaic", "pv module", "solar power", "solar project", 
+        "solar installation", "solar panel", "solar industry", "solar technology",
+        "solar energy", "crystalline silicon", "mono perc", "polysilicon",
+        "ingot", "wafer", "module assembly", "solar glass", "solar cells"
+    ]
     
+    # Additional battery keywords for more comprehensive detection
+    expanded_battery_keywords = BATTERY_KEYWORDS + [
+        "energy storage", "lithium ion", "li-ion", "battery cell", "battery tech",
+        "battery storage", "energy storage system", "ess", "bess", "lto", "lfp",
+        "lithium iron phosphate", "lithium titanate", "nmc", "cathode", "anode",
+        "advanced chemistry cell", "acc", "electrolyte", "cell manufacturing"
+    ]
+    
+    # Count keyword occurrences with weighted matching (whole words get more weight)
+    solar_count = 0
+    for keyword in expanded_solar_keywords:
+        if f" {keyword} " in f" {text_lower} ":  # Exact/whole word match
+            solar_count += 2
+        elif keyword in text_lower:  # Partial match
+            solar_count += 1
+    
+    battery_count = 0
+    for keyword in expanded_battery_keywords:
+        if f" {keyword} " in f" {text_lower} ":  # Exact/whole word match
+            battery_count += 2
+        elif keyword in text_lower:  # Partial match
+            battery_count += 1
+    
+    # Determine project type based on keyword counts
     if solar_count > battery_count:
-        return "solar"
+        return "Solar"  # Capitalize for consistency with database
     elif battery_count > solar_count:
-        return "battery"
+        return "Battery"  # Capitalize for consistency with database
     elif solar_count > 0:  # If tied but solar terms exist
-        return "solar"
+        return "Solar"
     elif battery_count > 0:  # If tied but battery terms exist
-        return "battery"
+        return "Battery"
     else:
         return None  # Not a relevant project
 

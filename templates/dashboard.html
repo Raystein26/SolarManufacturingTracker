@@ -20,7 +20,11 @@
                 </canvas>
             </div>
             <div class="card-footer text-muted d-flex justify-content-between">
-                <small>Total: {{ projects_by_type|sum(attribute='count') }} projects</small>
+                {% set project_count = 0 %}
+                {% for item in projects_by_type %}
+                   {% set project_count = project_count + item.count %}
+                {% endfor %}
+                <small>Total: {{ project_count }} projects</small>
                 <a href="/projects" class="text-decoration-none">View All</a>
             </div>
         </div>
