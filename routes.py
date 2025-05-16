@@ -132,7 +132,12 @@ def api_sources():
 def api_run_check():
     try:
         # Import here to avoid circular imports
-        from project_tracker import progress
+        from project_tracker import progress, initialize_sources
+        
+        # First ensure all sources are initialized
+        with app.app_context():
+            logger.info("Running initialize_sources from api_run_check")
+            initialize_sources()
         
         # Run the check in a background thread
         thread = threading.Thread(target=run_check_with_progress)
