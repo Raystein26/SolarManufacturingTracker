@@ -20,6 +20,14 @@ document.addEventListener('DOMContentLoaded', function() {
             exportToExcel();
         });
     }
+    
+    // Data cleanup
+    const cleanupDataButton = document.getElementById('cleanup-data-button');
+    if (cleanupDataButton) {
+        cleanupDataButton.addEventListener('click', function() {
+            cleanupData();
+        });
+    }
 
     // Filter projects by type
     const projectTypeFilter = document.getElementById('project-type-filter');
