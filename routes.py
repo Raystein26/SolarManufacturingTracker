@@ -146,6 +146,11 @@ def api_run_check():
 def run_check_with_progress():
     """Run manual check with progress tracking"""
     try:
+        # Initialize sources to make sure all new sources are included
+        from project_tracker import initialize_sources
+        with app.app_context():
+            initialize_sources()
+            
         # Get the result from the manual check
         result = run_manual_check()
         return result
