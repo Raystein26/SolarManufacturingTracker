@@ -55,28 +55,39 @@ DEFAULT_SOURCES = [
 ]
 
 def initialize_sources():
-    """Initialize the database with default sources if empty"""
-    source_count = Source.query.count()
-    if source_count == 0:
-        logger.info("No sources found in database. Initializing default sources.")
-        for url in DEFAULT_SOURCES:
-            # Extract domain name for the source name
-            domain = url.split("//")[-1].split("/")[0]
-            if domain.startswith('www.'):
-                domain = domain[4:]
-            name = ' '.join(word.capitalize() for word in domain.split('.')[0].split('-'))
-            
-            new_source = Source(
-                url=url,
-                name=name,
-                description=f"News source for renewable energy projects in India: {url}",
-                created_at=datetime.datetime.utcnow()
-            )
-            
-            db.session.add(new_source)
+    """Initialize the database with default sources if empty or update with new sources"""
+    with app.app_context():
+        # First, add any new sources that aren't in the database yet
+        existing_urls = {source.url for source in Source.query.all()}
+        new_sources_added = 0
         
-        db.session.commit()
-        logger.info(f"Added {len(DEFAULT_SOURCES)} default sources to the database.")
+        for url in DEFAULT_SOURCES:
+            if url not in existing_urls:
+                # Extract domain name for the source name
+                domain = url.split("//")[-1].split("/")[0]
+                if domain.startswith('www.'):
+                    domain = domain[4:]
+                name = ' '.join(word.capitalize() for word in domain.split('.')[0].split('-'))
+                
+                new_source = Source(
+                    url=url,
+                    name=name,
+                    description=f"News source for renewable energy projects in India: {url}",
+                    created_at=datetime.datetime.utcnow()
+                )
+                
+                db.session.add(new_source)
+                new_sources_added += 1
+        
+        # If any new sources were added or if the database was empty, commit changes
+        if new_sources_added > 0:
+            db.session.commit()
+            logger.info(f"Added {new_sources_added} new sources to the database.")
+            
+        # If database was completely empty, log a message
+        source_count = Source.query.count()
+        if source_count == new_sources_added and new_sources_added > 0:
+            logger.info(f"Initialized database with {source_count} default sources.")
 
 
 def check_source(source):

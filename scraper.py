@@ -6,6 +6,11 @@ import time
 import trafilatura
 from datetime import datetime
 from urllib.parse import urljoin, urlparse
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -281,8 +286,66 @@ def extract_article_content_alternative(article_url):
         return {'title': '', 'text': '', 'publish_date': None}
 
 
+# Initialize NLP resources
+try:
+    stop_words = set(stopwords.words('english'))
+except:
+    # Fallback if NLTK data is not available
+    stop_words = set(['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", "you've", 
+                      "you'll", "you'd", 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 
+                      'himself', 'she', "she's", 'her', 'hers', 'herself', 'it', "it's", 'its', 'itself', 
+                      'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 
+                      'this', 'that', "that'll", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 
+                      'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 
+                      'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 
+                      'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 
+                      'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 
+                      'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 
+                      'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 
+                      'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 
+                      's', 't', 'can', 'will', 'just', 'don', "don't", 'should', "should've", 'now', 'd', 'll', 
+                      'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn', "couldn't", 'didn', "didn't", 
+                      'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't", 'isn', "isn't", 
+                      'ma', 'mightn', "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't", 
+                      'shouldn', "shouldn't", 'wasn', "wasn't", 'weren', "weren't", 'won', "won't", 'wouldn', "wouldn't"])
+
+def preprocess_text(text):
+    """Preprocess text for NLP analysis"""
+    if not text:
+        return []
+        
+    # Convert to lowercase and tokenize
+    tokens = word_tokenize(text.lower())
+    
+    # Remove stopwords and non-alphabetic tokens
+    filtered_tokens = [word for word in tokens if word.isalpha() and word not in stop_words]
+    
+    return filtered_tokens
+
+def calculate_similarity(text1, text2):
+    """Calculate semantic similarity between two texts using TF-IDF and cosine similarity"""
+    if not text1 or not text2:
+        return 0.0
+        
+    # Create TF-IDF vectorizer
+    vectorizer = TfidfVectorizer()
+    
+    try:
+        # Transform texts to TF-IDF vectors
+        tfidf_matrix = vectorizer.fit_transform([text1, text2])
+        
+        # Calculate cosine similarity
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        return similarity
+    except Exception as e:
+        logger.warning(f"Error calculating similarity: {str(e)}")
+        return 0.0
+
 def is_india_project(text):
-    """Check if the article is about an Indian project"""
+    """Check if the article is about an Indian project using NLP techniques"""
+    if not text:
+        return False
+        
     india_terms = [
         'india', 'indian', 'gujarat', 'maharashtra', 'tamil nadu', 
         'karnataka', 'telangana', 'rajasthan', 'uttar pradesh',
@@ -306,9 +369,28 @@ def is_india_project(text):
     
     text_lower = text.lower()
     
-    # Check for India terms or Indian companies
-    return (any(term in text_lower for term in india_terms) or 
-            any(company in text_lower for company in indian_companies))
+    # Method 1: Direct keyword matching
+    direct_match = (any(term in text_lower for term in india_terms) or 
+                   any(company in text_lower for company in indian_companies))
+    
+    if direct_match:
+        return True
+    
+    # Method 2: NLP-based analysis for better accuracy
+    try:
+        # Create a reference text about Indian renewable energy
+        india_reference = "India renewable energy solar manufacturing battery storage projects in states like Gujarat Maharashtra Tamil Nadu"
+        
+        # Calculate semantic similarity
+        similarity_score = calculate_similarity(text_lower, india_reference)
+        
+        # High similarity indicates India-related content
+        if similarity_score > 0.2:  # Threshold determined empirically
+            return True
+    except Exception as e:
+        logger.warning(f"NLP analysis failed: {str(e)}")
+    
+    return False
 
 
 def is_pipeline_project(text):
