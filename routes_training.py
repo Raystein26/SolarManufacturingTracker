@@ -73,7 +73,7 @@ def api_upload():
                 'error': 'No file selected'
             })
         
-        if not file.filename.endswith(('.xlsx', '.xls')):
+        if file.filename and not file.filename.endswith(('.xlsx', '.xls')):
             return jsonify({
                 'success': False,
                 'error': 'File must be an Excel file (.xlsx or .xls)'

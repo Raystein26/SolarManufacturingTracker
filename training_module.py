@@ -278,7 +278,16 @@ class ProjectTypeTrainer:
                             value = float(row[col_name])
                         else:
                             # Try to extract numeric value from string
-                            value = float(re.search(r'[\d.]+', str(row[col_name])).group())
+                            try:
+                                match = re.search(r'[\d.]+', str(row[col_name]))
+                                if match:
+                                    value = float(match.group())
+                                else:
+                                    # Skip this value if no number found
+                                    continue
+                            except (TypeError, AttributeError):
+                                # Skip if regex search fails
+                                continue
                             
                         if col_name not in self.category_metrics[project_type]:
                             self.category_metrics[project_type][col_name] = []
@@ -300,7 +309,16 @@ class ProjectTypeTrainer:
                                 value = float(row[col])
                             else:
                                 # Try to extract numeric value from string
-                                value = float(re.search(r'[\d.]+', str(row[col])).group())
+                                try:
+                                    match = re.search(r'[\d.]+', str(row[col]))
+                                    if match:
+                                        value = float(match.group())
+                                    else:
+                                        # Skip this value if no number found
+                                        continue
+                                except (TypeError, AttributeError):
+                                    # Skip if regex search fails
+                                    continue
                                 
                             if col not in self.category_metrics[project_type]:
                                 self.category_metrics[project_type][col] = []

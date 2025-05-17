@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const formData = new FormData(uploadForm);
         
-        fetch("{{ url_for('training_bp.upload_training_file') }}", {
+        fetch("{{ url_for('training_bp.api_upload') }}", {
             method: 'POST',
             body: formData
         })
