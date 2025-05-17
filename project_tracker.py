@@ -6,7 +6,7 @@ import sys
 import threading
 from app import app, db
 from models import Project, Source, NewsArticle, ScrapeLog
-from scraper import fetch_news_from_source, extract_article_content, extract_project_data
+from new_scraper import fetch_news_from_source, extract_article_content, extract_project_data
 from progress_tracker import progress
 
 logger = logging.getLogger(__name__)
