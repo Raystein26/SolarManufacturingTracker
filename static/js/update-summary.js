@@ -152,11 +152,14 @@ function handleUpdateButtonClick(event) {
                                 if (progress.completed) {
                                     clearInterval(progressInterval);
                                     progressBar.style.width = '100%';
-                                    progressText.textContent = `Completed: ${progress.processed_sources}/${sourceCount} sources, ${progress.projects_added} projects added`;
+                                    
+                                    // Ensure we don't show more sources than we actually have
+                                    const displayProcessedSources = Math.min(progress.processed_sources, sourceCount);
+                                    progressText.textContent = `Completed: ${displayProcessedSources}/${sourceCount} sources, ${progress.projects_added} projects added`;
                                     
                                     // Store the final numbers
                                     projectsAdded = progress.projects_added;
-                                    processedCount = progress.processed_sources;
+                                    processedCount = displayProcessedSources;
                                     
                                     // Show summary dialog after completion
                                     setTimeout(() => {
@@ -186,8 +189,9 @@ function handleUpdateButtonClick(event) {
                                         }
                                     }, 1000);
                                 } else {
-                                    processedCount = progress.processed_sources;
-                                    const percent = Math.round((processedCount / sourceCount) * 100);
+                                    // Ensure we don't show more sources than we actually have
+                                    processedCount = Math.min(progress.processed_sources, sourceCount);
+                                    const percent = Math.min(100, Math.round((processedCount / sourceCount) * 100));
                                     progressBar.style.width = `${percent}%`;
                                     
                                     // Check if new projects were added

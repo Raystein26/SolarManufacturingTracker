@@ -331,6 +331,9 @@ def _run_check_thread():
             total_sources = len(sources)
             logger.info(f"Found {total_sources} sources to check")
             
+            # Track the actual processed sources to ensure accurate reporting
+            actual_processed = 0
+            
             # Set timeout limits
             max_source_time = 60  # seconds per source
             max_total_time = 1800  # 30 minutes total max
@@ -344,10 +347,11 @@ def _run_check_thread():
                     logger.info(f"Processing source {i+1}/{total_sources}: {source.name}")
                     
                     # Process source directly with proper error handling
+                    # We no longer create a new app context for each source as we're
+                    # already in one from the top of this function
                     try:
-                        # Create a new app context for each source check
-                        with app.app_context():
-                            check_source(source)
+                        check_source(source)
+                        actual_processed += 1
                     except Exception as source_error:
                         logger.error(f"Error checking source {source.name}: {str(source_error)}")
                         # Continue to next source even if this one fails
@@ -356,7 +360,9 @@ def _run_check_thread():
                     logger.error(f"Error processing source {source.name}: {str(e)}")
                 
                 # Always increment the counter, even if there was an error
-                progress.increment_source()
+                # But don't increment beyond the total number of sources
+                if actual_processed <= total_sources:
+                    progress.processed_sources = actual_processed
                 
                 # Add a small delay between sources 
                 elapsed = time.time() - source_start
@@ -373,7 +379,7 @@ def _run_check_thread():
                     logger.warning("Stopping source check due to multiple timeouts")
                     break
             
-            logger.info("Completed checking all sources")
+            logger.info(f"Completed checking all sources. Processed {actual_processed} of {total_sources}.")
         
         except Exception as e:
             logger.error(f"Error in source processing: {str(e)}")
