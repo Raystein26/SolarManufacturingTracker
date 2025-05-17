@@ -147,17 +147,27 @@ def check_source(source):
                 
             # Store article if new
             if not existing_article:
-                new_article = NewsArticle(
-                    url=article_url,
-                    title=content['title'],
-                    content=content['text'][:65535],  # Limit text size for database
-                    published_date=content['publish_date'],
-                    source_id=source.id,
-                    created_at=datetime.datetime.utcnow()
-                )
-                db.session.add(new_article)
-                db.session.commit()
-                existing_article = new_article
+                try:
+                    new_article = NewsArticle(
+                        url=article_url,
+                        title=content['title'],
+                        content=content['text'][:65535],  # Limit text size for database
+                        published_date=content['publish_date'],
+                        source_id=source.id,
+                        created_at=datetime.datetime.utcnow()
+                    )
+                    db.session.add(new_article)
+                    db.session.commit()
+                    existing_article = new_article
+                except Exception as e:
+                    # Handle duplicate URL or other database errors
+                    logger.error(f"Error adding article {article_url}: {str(e)}")
+                    db.session.rollback()
+                    # Try to get the article again after rollback
+                    existing_article = NewsArticle.query.filter_by(url=article_url).first()
+                    if not existing_article:
+                        # Skip this article if we can't add or retrieve it
+                        continue
             
             # Try to extract project data
             project_data = extract_project_data(article_url, content)
@@ -312,8 +322,10 @@ def _run_check_thread():
             total_sources = len(sources)
             logger.info(f"Found {total_sources} sources to check")
             
-            # Set a timeout for each source
-            max_source_time = 40  # seconds per source
+            # Set timeout limits
+            max_source_time = 60  # seconds per source (increased)
+            max_total_time = 1800  # 30 minutes total max (increased)
+            source_timeout_count = 0
             
             # Process each source with a timeout
             for i, source in enumerate(sources):
@@ -321,22 +333,54 @@ def _run_check_thread():
                 
                 try:
                     logger.info(f"Processing source {i+1}/{total_sources}: {source.name}")
-                    check_source(source)
+                    
+                    # Use a timeout for each source using threading
+                    source_completed = False
+                    source_error = None
+                    
+                    def process_with_timeout():
+                        nonlocal source_completed, source_error
+                        try:
+                            check_source(source)
+                            source_completed = True
+                        except Exception as e:
+                            source_error = e
+                            
+                    # Start source processing in a thread
+                    source_thread = threading.Thread(target=process_with_timeout)
+                    source_thread.daemon = True
+                    source_thread.start()
+                    
+                    # Wait for the thread with timeout
+                    source_thread.join(max_source_time)
+                    
+                    # Check if source processing completed or timed out
+                    if not source_completed:
+                        if source_error:
+                            logger.error(f"Error checking source {source.name}: {str(source_error)}")
+                        else:
+                            logger.warning(f"Source {source.name} processing timed out after {max_source_time} seconds")
+                            source_timeout_count += 1
+                                
                 except Exception as e:
-                    logger.error(f"Error checking source {source.name}: {str(e)}")
-                    # Continue to next source even if this one fails
+                    logger.error(f"Error processing source {source.name}: {str(e)}")
                 
                 # Always increment the counter, even if there was an error
                 progress.increment_source()
                 
-                # Add a small delay between sources
+                # Add a small delay between sources 
                 elapsed = time.time() - source_start
-                if elapsed < 3 and i < total_sources - 1:  # Don't delay after the last source
-                    time.sleep(min(3, max(0, 3 - elapsed)))
+                if elapsed < 2 and i < total_sources - 1:  # Don't delay after the last source
+                    time.sleep(2)  # Small fixed delay
+                
+                # Stop if we've been running too long
+                if progress.get_state()['elapsed'] > max_total_time:
+                    logger.warning(f"Stopping source check due to time limit ({max_total_time/60:.1f} minutes)")
+                    break
                     
-                # Stop if we've been running too long (15 minutes total max)
-                if progress.get_state()['elapsed'] > 900:
-                    logger.warning("Stopping source check due to time limit")
+                # Stop if too many timeouts in a row (possible connectivity issue)
+                if source_timeout_count >= 3:
+                    logger.warning("Stopping source check due to multiple timeouts")
                     break
             
         logger.info("Completed checking all sources")
