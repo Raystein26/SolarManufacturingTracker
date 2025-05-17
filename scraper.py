@@ -564,7 +564,13 @@ def determine_project_type(text):
     MIN_SCORE_THRESHOLD = 2  # Lower threshold to be more lenient with detection
     
     if highest_score < MIN_SCORE_THRESHOLD:
-        logger.info(f"Article doesn't have enough specific keywords (highest score: {highest_score})")
+        # Log top matches even if below threshold for diagnostic purposes
+        if type_scores:
+            top_types = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)[:2]
+            top_types_str = ", ".join([f"{t[0]}:{t[1]}" for t in top_types])
+            logger.info(f"Project type scores below threshold. Top matches: {top_types_str} (min threshold: {MIN_SCORE_THRESHOLD})")
+        else:
+            logger.info(f"No project types matched (min threshold: {MIN_SCORE_THRESHOLD})")
         return None
     
     # Make sure we're prioritizing renewable categories if scores are close
@@ -577,10 +583,15 @@ def determine_project_type(text):
         "Ethanol": 0.5     # Add boost to Ethanol detection
     }
     
+    # Log current scores before applying boosts
+    sorted_scores = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
+    logger.info(f"Project type scores before boosts: {', '.join([f'{t[0]}:{t[1]:.1f}' for t in sorted_scores])}")
+    
     # Apply priority boosts for renewable categories we want to promote
     for energy_type, boost in renewable_priorities.items():
         if energy_type in type_scores:
             type_scores[energy_type] += boost
+            logger.debug(f"Applied {boost} boost to {energy_type}")
             
     # Recalculate highest score after boosts
     highest_score = 0
@@ -590,7 +601,10 @@ def determine_project_type(text):
             highest_score = score
             project_type = energy_type
     
-    logger.info(f"Identified {project_type} project with score {highest_score}")
+    # Log final scores after boosts
+    sorted_scores = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
+    logger.info(f"Project type scores after boosts: {', '.join([f'{t[0]}:{t[1]:.1f}' for t in sorted_scores])}")
+    logger.info(f"Selected project type: {project_type} with final score {highest_score:.1f}")
     return project_type
 
 
@@ -603,22 +617,35 @@ def extract_project_data(article_url, content=None):
         if not content or not content['text']:
             logger.warning(f"No content extracted from {article_url}")
             return None
+        
+        # Log article title and basic information for better diagnostics
+        title = content.get('title', 'No Title')
+        text_length = len(content['text'])
+        logger.info(f"Processing article: '{title}' | Length: {text_length} chars | URL: {article_url}")
             
         # Determine if it's an India project
-        if not is_india_project(content['text']):
-            logger.debug(f"Not an India project: {article_url}")
+        india_result = is_india_project(content['text'])
+        if not india_result:
+            logger.info(f"Not an India project: '{title}' | URL: {article_url}")
             return None
+        else:
+            logger.info(f"India project confirmed: '{title}'")
             
         # Determine if it's a pipeline project
-        if not is_pipeline_project(content['text']):
-            logger.debug(f"Not a pipeline project: {article_url}")
+        pipeline_result = is_pipeline_project(content['text'])
+        if not pipeline_result:
+            logger.info(f"Not a pipeline project: '{title}' | URL: {article_url}")
             return None
+        else:
+            logger.info(f"Pipeline project confirmed: '{title}'")
             
         # Determine project type
         project_type = determine_project_type(content['text'])
         if not project_type:
-            logger.debug(f"Not a relevant project type: {article_url}")
+            logger.info(f"Not a relevant project type: '{title}' | URL: {article_url}")
             return None
+        else:
+            logger.info(f"Renewable project detected - Category: {project_type} | '{title}'")
             
         # Determine project category based on type and keywords in text
         text_lower = content['text'].lower()
