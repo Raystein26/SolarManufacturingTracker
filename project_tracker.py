@@ -309,9 +309,18 @@ def run_manual_check():
     
 def _run_check_thread():
     """Background thread to run the check process"""
+    
+    # Reset the progress counter before starting
+    progress.reset()
+    
     try:
         logger.info("Starting manual check of all sources in background thread")
-        with app.app_context():
+        
+        # Create a new application context for the entire thread
+        ctx = app.app_context()
+        ctx.push()
+        
+        try:
             # First make sure all sources are properly initialized
             # This ensures new sources are added to the database
             initialize_sources()
@@ -323,8 +332,8 @@ def _run_check_thread():
             logger.info(f"Found {total_sources} sources to check")
             
             # Set timeout limits
-            max_source_time = 60  # seconds per source (increased)
-            max_total_time = 1800  # 30 minutes total max (increased)
+            max_source_time = 60  # seconds per source
+            max_total_time = 1800  # 30 minutes total max
             source_timeout_count = 0
             
             # Process each source with a timeout
@@ -334,33 +343,14 @@ def _run_check_thread():
                 try:
                     logger.info(f"Processing source {i+1}/{total_sources}: {source.name}")
                     
-                    # Use a timeout for each source using threading
-                    source_completed = False
-                    source_error = None
-                    
-                    def process_with_timeout():
-                        nonlocal source_completed, source_error
-                        try:
+                    # Process source directly with proper error handling
+                    try:
+                        # Create a new app context for each source check
+                        with app.app_context():
                             check_source(source)
-                            source_completed = True
-                        except Exception as e:
-                            source_error = e
-                            
-                    # Start source processing in a thread
-                    source_thread = threading.Thread(target=process_with_timeout)
-                    source_thread.daemon = True
-                    source_thread.start()
-                    
-                    # Wait for the thread with timeout
-                    source_thread.join(max_source_time)
-                    
-                    # Check if source processing completed or timed out
-                    if not source_completed:
-                        if source_error:
-                            logger.error(f"Error checking source {source.name}: {str(source_error)}")
-                        else:
-                            logger.warning(f"Source {source.name} processing timed out after {max_source_time} seconds")
-                            source_timeout_count += 1
+                    except Exception as source_error:
+                        logger.error(f"Error checking source {source.name}: {str(source_error)}")
+                        # Continue to next source even if this one fails
                                 
                 except Exception as e:
                     logger.error(f"Error processing source {source.name}: {str(e)}")
@@ -383,10 +373,20 @@ def _run_check_thread():
                     logger.warning("Stopping source check due to multiple timeouts")
                     break
             
-        logger.info("Completed checking all sources")
+            logger.info("Completed checking all sources")
+        
+        except Exception as e:
+            logger.error(f"Error in source processing: {str(e)}")
+            progress.set_error(str(e))
+        
+        finally:
+            # Pop the application context when done
+            ctx.pop()
+            
     except Exception as e:
         logger.error(f"Error in manual check thread: {str(e)}")
         progress.set_error(str(e))
+        
     finally:
         # Always mark as completed to prevent hanging UI
         progress.complete()

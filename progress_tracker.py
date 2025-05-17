@@ -21,6 +21,14 @@ class ProgressTracker:
     def reset(self):
         """Reset the tracker to initial state"""
         with self._lock:
+            # First stop any existing tracking
+            self.is_completed = True
+            self.is_in_progress = False
+        
+        time.sleep(0.5)  # Give time for any running watchdog to stop
+        
+        with self._lock:
+            # Now reset everything to start fresh
             self.processed_sources = 0
             self.projects_added = 0
             self.is_completed = False
