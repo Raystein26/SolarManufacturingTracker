@@ -309,7 +309,7 @@ function initializeCharts() {
     const capacityChart = document.getElementById('capacity-chart');
     if (capacityChart) {
         // Get all capacity data from data attributes
-        const labels = [
+        const rawLabels = [
             'Solar (GW)', 
             'Wind (GW)', 
             'Hydro (GW)', 
@@ -319,7 +319,7 @@ function initializeCharts() {
             'Ethanol (ML)'
         ];
         
-        const data = [
+        const rawData = [
             parseFloat(capacityChart.dataset.solarCapacity || 0),
             parseFloat(capacityChart.dataset.windCapacity || 0),
             parseFloat(capacityChart.dataset.hydroCapacity || 0),
@@ -328,6 +328,19 @@ function initializeCharts() {
             parseFloat(capacityChart.dataset.biogasCapacity || 0),
             parseFloat(capacityChart.dataset.ethanolCapacity || 0)
         ];
+        
+        // Filter out zero values for cleaner visualization
+        // but always show at least the primary categories (Solar/Battery)
+        const labels = [];
+        const data = [];
+        
+        for (let i = 0; i < rawLabels.length; i++) {
+            // Include if it has data or is one of the main categories
+            if (rawData[i] > 0 || i < 2) {
+                labels.push(rawLabels[i]);
+                data.push(rawData[i]);
+            }
+        }
         
         // Colors for different energy types
         const backgroundColors = [
