@@ -65,7 +65,7 @@ def api_potential_projects():
             'enabled': True
         })
 
-@diagnostic_bp.route('/diagnostic', methods=['GET'])
+@diagnostic_bp.route('/', methods=['GET'])
 def diagnostic_dashboard():
     """Render the diagnostic dashboard page"""
     diagnostic_enabled = DIAGNOSTIC_MODE

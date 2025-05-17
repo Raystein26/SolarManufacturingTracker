@@ -181,6 +181,7 @@ class ProjectTypeTrainer:
         for field in name_fields:
             if field in row and pd.notna(row[field]):
                 try:
+                    # Always convert to string to handle numeric types
                     name = str(row[field]).lower()
                     
                     # Add project name keywords
@@ -201,6 +202,7 @@ class ProjectTypeTrainer:
         for field in company_fields:
             if field in row and pd.notna(row[field]):
                 try:
+                    # Always convert to string to handle numeric types
                     company = str(row[field]).lower()
                     # Companies often specialize in specific renewable types
                     self.category_keywords[project_type].add(company)
