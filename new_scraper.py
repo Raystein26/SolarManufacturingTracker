@@ -315,6 +315,7 @@ def is_india_project(text):
 def is_renewable_project(text):
     """Determine if the text is about a renewable energy project"""
     if not text:
+        logger.debug("No text provided to renewable project check")
         return False, None
     
     text_lower = text.lower()
@@ -330,37 +331,54 @@ def is_renewable_project(text):
     for indicator in project_indicators:
         if indicator in text_lower:
             has_project = True
+            logger.debug(f"Found project indicator: {indicator}")
             break
     
     if not has_project:
+        logger.debug("No project indicators found in text")
         return False, None
     
     # Check for each energy category
     scores = {}
+    logger.debug("Checking for renewable energy categories")
     for category, data in ENERGY_CATEGORIES.items():
         score = 0
+        matched_keywords = []
+        
         for keyword in data["keywords"]:
             if keyword in text_lower:
                 # Exact matches get more weight
                 if f" {keyword} " in f" {text_lower} ":
                     score += 2
+                    matched_keywords.append(f"{keyword} (exact)")
                 else:
                     score += 1
+                    matched_keywords.append(keyword)
                     
         # Check for capacity patterns (give bonus points)
         for pattern in data["capacity_patterns"]:
-            if re.search(pattern, text_lower):
+            pattern_match = re.search(pattern, text_lower)
+            if pattern_match:
                 score += 3
+                matched_keywords.append(f"capacity pattern: {pattern_match.group(0)}")
                 
         if score > 0:
             scores[category] = score
+            logger.debug(f"Category {category} score: {score} - matched: {', '.join(matched_keywords)}")
     
     # Find the highest scoring category
     if scores:
         best_category = max(scores.items(), key=lambda x: x[1])
+        logger.debug(f"Best category: {best_category[0]} with score {best_category[1]}")
+        
         # Minimum threshold to consider it as a renewable project
         if best_category[1] >= 2:
+            logger.info(f"Renewable project detected! Category: {best_category[0]}, Score: {best_category[1]}")
             return True, best_category[0]
+        else:
+            logger.debug(f"Score too low: {best_category[1]} (minimum: 2)")
+    else:
+        logger.debug("No renewable energy categories detected")
     
     return False, None
 
@@ -579,29 +597,42 @@ def extract_project_data(article_url, content=None):
     try:
         # Get content if not provided
         if not content:
+            logger.debug(f"No content provided, extracting from URL: {article_url}")
             content = extract_article_content(article_url)
         
         if not content or not content.get('text'):
             logger.warning(f"No content extracted from {article_url}")
             return None
         
-        # Check if it's an India project
-        if not is_india_project(content['text']):
-            logger.debug(f"Not an India project: {article_url}")
-            return None
+        # Log the start of extraction process with article title
+        logger.info(f"Processing article: {content.get('title', 'No Title')} | URL: {article_url}")
+        logger.debug(f"Article text length: {len(content['text'])} characters")
         
-        # Check if it's a renewable project
+        # Check if it's an India project
+        india_project = is_india_project(content['text'])
+        if not india_project:
+            logger.info(f"Not an India project: {article_url}")
+            return None
+        else:
+            logger.info(f"India project confirmed: {article_url}")
+        
+        # Check if it's a renewable project - this is where our detection happens
         is_renewable, energy_category = is_renewable_project(content['text'])
         if not is_renewable or not energy_category:
-            logger.debug(f"Not a renewable energy project: {article_url}")
+            logger.info(f"Not a renewable energy project: {article_url}")
             return None
+        else:
+            logger.info(f"Renewable project detected - Category: {energy_category}")
         
         # Check if it's a pipeline project
         if not is_pipeline_project(content['text']):
-            logger.debug(f"Not a pipeline project: {article_url}")
+            logger.info(f"Not a pipeline project: {article_url}")
             return None
+        else:
+            logger.info(f"Pipeline project confirmed: {article_url}")
         
-        logger.info(f"Identified {energy_category} project in {article_url}")
+        # If we got this far, we have a valid renewable energy project!
+        logger.info(f"NEW PROJECT FOUND! Category: {energy_category}, URL: {article_url}")
         
         # Extract basic project data
         title = content.get('title', '')
