@@ -34,12 +34,23 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Application feature flags
+app.config["DIAGNOSTIC_MODE"] = True  # Enable diagnostic mode to track potential projects
+
 # Initialize the app with the extension
 db.init_app(app)
 
 # Import routes after app initialization to avoid circular imports
 from routes import *
 import models  # Import models to register them with SQLAlchemy
+
+# Import diagnostic routes
+try:
+    from routes_diagnostic import diagnostic_bp
+    app.register_blueprint(diagnostic_bp)
+    logger.info("Diagnostic routes registered successfully")
+except ImportError:
+    logger.warning("Diagnostic routes could not be registered")
 
 # Initialize database
 with app.app_context():

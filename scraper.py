@@ -18,8 +18,16 @@ logging.basicConfig(level=logging.INFO,
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('scraper')
 
-# Set a global diagnostic mode flag, will be properly initialized later
-DIAGNOSTIC_MODE = False
+# Set a global diagnostic mode flag, will be properly initialized when used
+# This will be updated from the app config when actually used
+DIAGNOSTIC_MODE = True
+
+# Initialize diagnostic tracker
+try:
+    from diagnostic_tracker import diagnostic_tracker
+    logger.info("Diagnostic tracker imported successfully")
+except ImportError:
+    logger.warning("Diagnostic tracker module not available")
 
 # Initialize NLTK resources if needed
 try:

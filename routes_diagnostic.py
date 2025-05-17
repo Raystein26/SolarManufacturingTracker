@@ -16,10 +16,10 @@ except ImportError:
     DIAGNOSTIC_MODE = False
     logger.warning("Diagnostic tracker not available - diagnostic routes will have limited functionality")
 
-# Create a blueprint for diagnostic routes
-diagnostic_bp = Blueprint('diagnostic', __name__)
+# Create a blueprint for diagnostic routes with a unique name
+diagnostic_bp = Blueprint('diagnostic_blueprint', __name__, url_prefix='/diagnostic')
 
-@diagnostic_bp.route('/api/diagnostic/stats', methods=['GET'])
+@diagnostic_bp.route('/api/stats', methods=['GET'])
 def api_diagnostic_stats():
     """Get diagnostic statistics about potential missed projects"""
     if not DIAGNOSTIC_MODE:
