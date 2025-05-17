@@ -476,85 +476,166 @@ def is_pipeline_project(text):
 
 
 def determine_project_type(text):
-    """Determine if the article is about a solar or battery manufacturing project with strict filtering"""
+    """Determine renewable energy project type across expanded categories"""
+    if not text:
+        return None
+        
     text_lower = text.lower()
     
-    # CRITICAL CHECK: Article MUST contain manufacturing-specific keywords
-    manufacturing_terms = [
-        "manufacturing", "factory", "production", "facility", "plant", "gw capacity", 
-        "manufacturing hub", "production line", "manufacturing unit"
+    # FIRST CHECK: Must be about renewables and energy
+    renewable_terms = [
+        "renewable energy", "clean energy", "green energy", "sustainable energy",
+        "solar", "wind", "hydro", "battery", "energy storage", "green hydrogen",
+        "biogas", "ethanol", "biofuel"
     ]
     
-    # FIRST CHECK: Article must contain manufacturing keywords
-    if not any(term in text_lower for term in manufacturing_terms):
-        logger.info("Article lacks manufacturing focus")
+    energy_focus = False
+    for term in renewable_terms:
+        if term in text_lower:
+            energy_focus = True
+            break
+    
+    if not energy_focus:
+        logger.info("Article lacks renewable energy focus")
         return None
     
-    # SECOND CHECK: Article must contain capacity indicators
-    capacity_pattern = r'\d+(?:\.\d+)?\s*(?:GW|MW|GWh|MWh)'
-    has_capacity = re.search(capacity_pattern, text, re.IGNORECASE) is not None
+    # SECOND CHECK: Must have capacity, production, or investment details
+    capacity_patterns = [
+        r'\d+(?:\.\d+)?\s*(?:GW|MW|GWh|MWh)', # Power capacity
+        r'\d+(?:\.\d+)?\s*(?:TPD|tons per day)', # Production capacity (tons)
+        r'\d+(?:\.\d+)?\s*(?:KLPD|KL|million litres)', # Ethanol capacity
+        r'\d+(?:\.\d+)?\s*(?:MMSCMD)' # Gas capacity
+    ]
     
-    # Or investment indicators
-    investment_pattern = r'(?:invest|funding|investment).*?(?:Rs\.?|INR|\$|USD|crore|billion)\s*\d+'
+    has_capacity = False
+    for pattern in capacity_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            has_capacity = True
+            break
+            
+    # Investment indicators
+    investment_pattern = r'(?:invest|funding|investment).*?(?:Rs\.?|INR|\$|USD|crore|billion|million)\s*\d+'
     has_investment = re.search(investment_pattern, text, re.IGNORECASE) is not None
     
     if not (has_capacity or has_investment):
         logger.info("Article lacks specific capacity or investment details")
         return None
     
-    # Only if article passes manufacturing and capacity/investment checks, proceed with classification
+    # Define project categories and their keywords
+    project_types = {
+        "Solar": {
+            "general": ["solar", "photovoltaic", "pv", "solar panel", "solar cell", "solar module"],
+            "manufacturing": [
+                "solar cell manufacturing", "solar module production", "pv manufacturing facility",
+                "solar panel factory", "module manufacturing", "solar gigafactory", 
+                "solar manufacturing capacity", "wafer production", "cell production line"
+            ],
+            "generation": [
+                "solar plant", "solar power plant", "solar farm", "solar park", "solar generation",
+                "utility-scale solar", "grid-connected solar", "solar power project"
+            ]
+        },
+        
+        "Battery": {
+            "general": ["battery", "energy storage", "lithium-ion", "li-ion", "storage system"],
+            "manufacturing": [
+                "battery manufacturing", "battery factory", "cell production",
+                "gigafactory", "battery cell facility", "energy storage manufacturing",
+                "lithium-ion production", "battery manufacturing hub"
+            ],
+            "storage": [
+                "grid storage", "battery storage project", "energy storage facility",
+                "utility-scale storage", "power storage", "battery energy storage system"
+            ]
+        },
+        
+        "Wind": {
+            "general": ["wind", "wind turbine", "wind energy", "wind power"],
+            "manufacturing": [
+                "wind turbine manufacturing", "wind equipment production", "turbine factory",
+                "blade manufacturing", "wind component facility", "nacelle production"
+            ],
+            "generation": [
+                "wind farm", "wind park", "wind power plant", "onshore wind project",
+                "offshore wind project", "wind generation facility"
+            ]
+        },
+        
+        "Hydro": {
+            "general": ["hydro", "hydroelectric", "hydropower", "pumped storage", "hydel"],
+            "generation": [
+                "hydropower plant", "hydro project", "dam project", "hydroelectric facility",
+                "pumped storage project", "run-of-river hydro", "small hydro"
+            ]
+        },
+        
+        "GreenHydrogen": {
+            "general": ["green hydrogen", "hydrogen", "h2", "clean hydrogen", "electrolyzer"],
+            "production": [
+                "electrolyzer plant", "hydrogen production facility", "green hydrogen plant",
+                "hydrogen generation", "electrolysis facility", "green h2 plant"
+            ]
+        },
+        
+        "Biogas": {
+            "general": ["biogas", "compressed biogas", "cbg", "biomethane", "biomethanation"],
+            "production": [
+                "biogas plant", "cbg plant", "biomethane production", "biogas facility",
+                "anaerobic digester", "biomethanation plant"
+            ]
+        },
+        
+        "Ethanol": {
+            "general": ["ethanol", "bioethanol", "biofuel", "e20", "ethanol blending"],
+            "production": [
+                "ethanol plant", "distillery", "ethanol production facility", "biofuel plant",
+                "bioethanol facility", "ethanol manufacturing"
+            ]
+        }
+    }
     
-    # STRICT SOLAR KEYWORDS - manufacturing specific only
-    strict_solar_keywords = [
-        "solar cell manufacturing", "solar module production", "pv manufacturing facility",
-        "solar panel factory", "module manufacturing", "solar gigafactory", 
-        "solar manufacturing capacity", "wafer production", "cell production line",
-        "gw module capacity", "gw cell capacity", "solar cell factory"
-    ]
+    # Calculate scores for each project type
+    type_scores = {}
+    for energy_type, categories in project_types.items():
+        score = 0
+        
+        # Check general terms
+        for term in categories["general"]:
+            if f" {term} " in f" {text_lower} ":  # Exact match
+                score += 2
+            elif term in text_lower:  # Partial match
+                score += 1
+        
+        # Check specific categories (manufacturing, generation, etc.)
+        for category, terms in categories.items():
+            if category == "general":
+                continue  # Already processed
+                
+            for term in terms:
+                if f" {term} " in f" {text_lower} ":  # Exact match
+                    score += 3  # Higher weight for specialized terms
+                elif term in text_lower:  # Partial match
+                    score += 1
+        
+        type_scores[energy_type] = score
     
-    # STRICT BATTERY KEYWORDS - manufacturing specific only
-    strict_battery_keywords = [
-        "battery manufacturing", "battery factory", "cell production",
-        "gigafactory", "battery cell facility", "energy storage manufacturing",
-        "lithium-ion production", "gwh battery capacity", "battery manufacturing hub",
-        "battery cell production", "cell manufacturing line", "battery plant"
-    ]
+    # Find the highest scoring type
+    highest_score = 0
+    project_type = None
+    for energy_type, score in type_scores.items():
+        if score > highest_score:
+            highest_score = score
+            project_type = energy_type
     
-    # Count keyword occurrences with weighted matching (whole words get more weight)
-    solar_score = 0
-    for keyword in strict_solar_keywords:
-        if f" {keyword} " in f" {text_lower} ":  # Exact match
-            solar_score += 3  # Higher weight for exact matches
-        elif keyword in text_lower:  # Partial match
-            solar_score += 1
-    
-    battery_score = 0
-    for keyword in strict_battery_keywords:
-        if f" {keyword} " in f" {text_lower} ":  # Exact match
-            battery_score += 3  # Higher weight for exact matches
-        elif keyword in text_lower:  # Partial match
-            battery_score += 1
-    
-    # THIRD CHECK: Scores must exceed minimum threshold to be considered valid
+    # THIRD CHECK: Scores must exceed minimum threshold
     MIN_SCORE_THRESHOLD = 3
     
-    if solar_score < MIN_SCORE_THRESHOLD and battery_score < MIN_SCORE_THRESHOLD:
-        logger.info(f"Article doesn't have enough specific keywords (Solar: {solar_score}, Battery: {battery_score})")
+    if highest_score < MIN_SCORE_THRESHOLD:
+        logger.info(f"Article doesn't have enough specific keywords (highest score: {highest_score})")
         return None
     
-    # Determine project type based on keyword scores
-    if solar_score > battery_score:
-        logger.info(f"Identified SOLAR manufacturing project (score: {solar_score})")
-        return "Solar"
-    elif battery_score > solar_score:
-        logger.info(f"Identified BATTERY manufacturing project (score: {battery_score})")
-        return "Battery"
-    elif solar_score > 0:  # If tied but solar terms exist
-        return "Solar"
-    elif battery_score > 0:  # If tied but battery terms exist
-        return "Battery"
-    else:
-        return None  # Not a relevant project
+    logger.info(f"Identified {project_type} project with score {highest_score}")
+    return project_type
 
 
 def extract_project_data(article_url, content=None):
