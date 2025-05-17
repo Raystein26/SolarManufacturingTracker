@@ -54,10 +54,6 @@ def dashboard():
     
     # Get all project types
     project_types = db.session.query(Project.type, db.func.count(Project.id)).group_by(Project.type).all()
-    project_types = [t[0] for t in project_types]  # List of project types in the database
-    
-    # Ensure all categories are represented even if no projects yet
-    all_project_types = ['Solar', 'Wind', 'Hydro', 'Battery', 'GreenHydrogen', 'Biogas', 'Ethanol']
     
     # Total capacity by type for all renewable energy categories
     solar_capacity = db.session.query(db.func.sum(Project.generation_capacity)).filter_by(type='Solar').scalar() or 0
@@ -83,7 +79,6 @@ def dashboard():
                           biogas_capacity=biogas_capacity,
                           ethanol_capacity=ethanol_capacity,
                           recent_logs=recent_logs,
-                          all_project_types=all_project_types,
                           datetime=datetime)
 
 @app.route('/projects')

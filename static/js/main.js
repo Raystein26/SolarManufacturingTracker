@@ -329,15 +329,16 @@ function initializeCharts() {
             parseFloat(capacityChart.dataset.ethanolCapacity || 0)
         ];
         
-        // Always include all categories, but keep track of how many have actual data
-        const labels = [...rawLabels];
-        const data = [...rawData];
+        // Filter out zero values for cleaner visualization
+        // but always show at least the primary categories (Solar/Battery)
+        const labels = [];
+        const data = [];
         
-        // Count how many categories have data (for visualization purposes)
-        let categoriesWithData = 0;
-        for (let i = 0; i < data.length; i++) {
-            if (data[i] > 0) {
-                categoriesWithData++;
+        for (let i = 0; i < rawLabels.length; i++) {
+            // Include if it has data or is one of the main categories
+            if (rawData[i] > 0 || i < 2) {
+                labels.push(rawLabels[i]);
+                data.push(rawData[i]);
             }
         }
         
