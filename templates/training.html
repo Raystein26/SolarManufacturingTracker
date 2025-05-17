@@ -15,7 +15,7 @@
                 <div class="card-body">
                     <p>Upload Excel files containing examples of renewable energy projects to improve category detection.</p>
                     
-                    <form id="upload-form" method="post" enctype="multipart/form-data" action="{{ url_for('training_bp.upload_training_file') }}">
+                    <form id="upload-form" method="post" enctype="multipart/form-data" action="{{ url_for('training_bp.api_upload') }}">
                         <div class="mb-3">
                             <label for="training-file" class="form-label">Excel File</label>
                             <input type="file" class="form-control" id="training-file" name="training_file" accept=".xlsx,.xls">

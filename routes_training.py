@@ -56,7 +56,7 @@ def get_training_stats():
         })
 
 @training_bp.route('/api/upload', methods=['POST'])
-def upload_training_file():
+def api_upload():
     """Upload and process a training Excel file"""
     try:
         if 'training_file' not in request.files:
