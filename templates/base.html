@@ -64,6 +64,11 @@
                         </ul>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/diagnostic' %}active{% endif %}" href="/diagnostic">
+                            <i class="fas fa-microscope me-1"></i> Diagnostics
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.path == '/about' %}active{% endif %}" href="/about">
                             <i class="fas fa-info-circle me-1"></i> About
                         </a>

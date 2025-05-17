@@ -18,6 +18,9 @@ logging.basicConfig(level=logging.INFO,
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('scraper')
 
+# Set a global diagnostic mode flag, will be properly initialized later
+DIAGNOSTIC_MODE = False
+
 # Initialize NLTK resources if needed
 try:
     nltk.data.find('tokenizers/punkt')
@@ -622,11 +625,31 @@ def extract_project_data(article_url, content=None):
         title = content.get('title', 'No Title')
         text_length = len(content['text'])
         logger.info(f"Processing article: '{title}' | Length: {text_length} chars | URL: {article_url}")
+        
+        # Create a record of potential scores and reasons for diagnostic tracking
+        diagnostic_scores = {}
+        rejection_reason = None
             
         # Determine if it's an India project
         india_result = is_india_project(content['text'])
         if not india_result:
             logger.info(f"Not an India project: '{title}' | URL: {article_url}")
+            rejection_reason = "Not_India_Project"
+            
+            # If diagnostic mode is enabled, track this potential miss
+            if DIAGNOSTIC_MODE and 'diagnostic_tracker' in globals():
+                try:
+                    from diagnostic_tracker import diagnostic_tracker
+                    diagnostic_tracker.track_potential_project(
+                        article_url, 
+                        title, 
+                        content['text'][:500], 
+                        diagnostic_scores,
+                        rejection_reason
+                    )
+                except Exception as e:
+                    logger.error(f"Error tracking potential project: {e}")
+            
             return None
         else:
             logger.info(f"India project confirmed: '{title}'")
@@ -635,14 +658,66 @@ def extract_project_data(article_url, content=None):
         pipeline_result = is_pipeline_project(content['text'])
         if not pipeline_result:
             logger.info(f"Not a pipeline project: '{title}' | URL: {article_url}")
+            rejection_reason = "Not_Pipeline_Project"
+            
+            # If diagnostic mode is enabled, track this potential miss
+            if DIAGNOSTIC_MODE and 'diagnostic_tracker' in globals():
+                try:
+                    from diagnostic_tracker import diagnostic_tracker
+                    diagnostic_tracker.track_potential_project(
+                        article_url, 
+                        title, 
+                        content['text'][:500],
+                        diagnostic_scores,
+                        rejection_reason
+                    )
+                except Exception as e:
+                    logger.error(f"Error tracking potential project: {e}")
+                    
             return None
         else:
             logger.info(f"Pipeline project confirmed: '{title}'")
+        
+        # Get scores for all potential project types
+        text_lower = content['text'].lower()
+        type_keywords = {
+            'Solar': ['solar', 'photovoltaic', 'pv', 'solar cell', 'solar panel', 'module', 'wafer'],
+            'Battery': ['battery', 'energy storage', 'storage system', 'lithium', 'cell', 'accumulator', 'bess'],
+            'Wind': ['wind', 'turbine', 'wind farm', 'wind park', 'wind energy', 'onshore', 'offshore'],
+            'Hydro': ['hydro', 'hydropower', 'hydroelectric', 'dam', 'pumped storage', 'water power'],
+            'GreenHydrogen': ['hydrogen', 'electrolyser', 'green hydrogen', 'electrolyzer', 'h2', 'fuel cell'],
+            'Biogas': ['biogas', 'biomethane', 'bioenergy', 'organic waste', 'anaerobic', 'digestate'],
+            'Ethanol': ['ethanol', 'biofuel', 'distillery', 'ethanol plant', 'e20', 'flex fuel', 'bioethanol']
+        }
+        
+        # Calculate preliminary scores for diagnostic purposes
+        for energy_type, keywords in type_keywords.items():
+            score = 0
+            for keyword in keywords:
+                if keyword in text_lower:
+                    score += 1
+            diagnostic_scores[energy_type] = score
             
-        # Determine project type
+        # Determine project type using the full algorithm
         project_type = determine_project_type(content['text'])
         if not project_type:
             logger.info(f"Not a relevant project type: '{title}' | URL: {article_url}")
+            rejection_reason = "Not_Renewable_Energy_Project"
+            
+            # If diagnostic mode is enabled, track this potential miss with all scores
+            if DIAGNOSTIC_MODE and 'diagnostic_tracker' in globals():
+                try:
+                    from diagnostic_tracker import diagnostic_tracker
+                    diagnostic_tracker.track_potential_project(
+                        article_url, 
+                        title, 
+                        content['text'][:500], 
+                        diagnostic_scores,
+                        rejection_reason
+                    )
+                except Exception as e:
+                    logger.error(f"Error tracking potential project: {e}")
+                    
             return None
         else:
             logger.info(f"Renewable project detected - Category: {project_type} | '{title}'")
