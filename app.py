@@ -52,6 +52,14 @@ try:
 except ImportError:
     logger.warning("Diagnostic routes could not be registered")
 
+# Import training routes
+try:
+    from routes_training import training_bp
+    app.register_blueprint(training_bp)
+    logger.info("Training routes registered successfully")
+except ImportError:
+    logger.warning("Training routes could not be registered")
+
 # Initialize database
 with app.app_context():
     db.create_all()

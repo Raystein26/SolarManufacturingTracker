@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block title %}Training Dashboard - India Renewable Energy Tracker{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Training Dashboard</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Upload Training Data</h5>
+                </div>
+                <div class="card-body">
+                    <p>Upload Excel files containing examples of renewable energy projects to improve category detection.</p>
+                    
+                    <form id="upload-form" method="post" enctype="multipart/form-data" action="{{ url_for('training_bp.upload_training_file') }}">
+                        <div class="mb-3">
+                            <label for="training-file" class="form-label">Excel File</label>
+                            <input type="file" class="form-control" id="training-file" name="training_file" accept=".xlsx,.xls">
+                            <div class="form-text">Upload an Excel file with project examples across different renewable energy categories.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Upload & Train</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Current Training Data</h5>
+                </div>
+                <div class="card-body">
+                    <div id="training-stats">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Training Guide</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Excel File Format</h6>
+                    <p>Your Excel file should include the following columns:</p>
+                    <ul class="mb-4">
+                        <li><strong>Type</strong>: Renewable energy category (Solar, Wind, Hydro, Battery, Hydrogen, Biofuel)</li>
+                        <li><strong>Name</strong>: Project name</li>
+                        <li><strong>Company</strong>: Developer company</li>
+                        <li><strong>State</strong>: Indian state</li>
+                        <li><strong>Category</strong>: Project category (Manufacturing, Generation, etc.)</li>
+                    </ul>
+                    
+                    <h6>Sample Data</h6>
+                    <p>Download our sample template with examples of different renewable energy categories.</p>
+                    <a href="{{ url_for('training_bp.download_sample_file') }}" class="btn btn-outline-success">Download Sample Template</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Category Detection Results</h5>
+                </div>
+                <div class="card-body">
+                    <div id="category-results">
+                        <p>Upload a training file to see detection results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load training stats on page load
+    fetchTrainingStats();
+    
+    // Handle form submission
+    const uploadForm = document.getElementById('upload-form');
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(uploadForm);
+        
+        fetch("{{ url_for('training_bp.upload_training_file') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Training file uploaded and processed successfully!');
+                fetchTrainingStats();
+                displayCategoryResults(data.training_results);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred during upload.');
+        });
+    });
+    
+    function fetchTrainingStats() {
+        fetch("{{ url_for('training_bp.get_training_stats') }}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayTrainingStats(data.stats);
+            } else {
+                document.getElementById('training-stats').innerHTML = 
+                    '<div class="alert alert-warning">No training data available yet.</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('training-stats').innerHTML = 
+                '<div class="alert alert-danger">Error loading training stats.</div>';
+        });
+    }
+    
+    function displayTrainingStats(stats) {
+        let html = '<div class="table-responsive">';
+        html += '<table class="table table-striped table-hover">';
+        html += '<thead><tr><th>Category</th><th>Keywords</th><th>Examples</th></tr></thead>';
+        html += '<tbody>';
+        
+        if (Object.keys(stats).length === 0) {
+            html = '<div class="alert alert-warning">No training data available yet.</div>';
+        } else {
+            for (const [category, data] of Object.entries(stats)) {
+                const keywordCount = data.keywords ? data.keywords.length : 0;
+                const exampleCount = data.examples || 0;
+                
+                html += `<tr>
+                    <td><span class="badge bg-info">${category}</span></td>
+                    <td>${keywordCount} keywords</td>
+                    <td>${exampleCount} examples</td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+        }
+        
+        document.getElementById('training-stats').innerHTML = html;
+    }
+    
+    function displayCategoryResults(results) {
+        let html = '<div class="row">';
+        
+        if (!results || Object.keys(results).length === 0) {
+            html = '<div class="alert alert-warning">No category detection results available.</div>';
+        } else {
+            for (const [category, data] of Object.entries(results)) {
+                const keywords = data.keywords || [];
+                const phrases = data.phrases || [];
+                
+                html += `<div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="mb-0">${category.toUpperCase()}</h6>
+                        </div>
+                        <div class="card-body">
+                            <h6>Top Keywords:</h6>
+                            <p>${keywords.slice(0, 10).join(', ')}</p>
+                            <h6>Key Phrases:</h6>
+                            <p>${phrases.slice(0, 5).join(', ') || 'None detected'}</p>
+                        </div>
+                    </div>
+                </div>`;
+            }
+        }
+        
+        html += '</div>';
+        document.getElementById('category-results').innerHTML = html;
+    }
+});
+</script>
+{% endblock %}
