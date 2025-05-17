@@ -42,7 +42,7 @@ def api_diagnostic_stats():
             'enabled': True
         })
 
-@diagnostic_bp.route('/api/diagnostic/potential_projects', methods=['GET'])
+@diagnostic_bp.route('/api/potential', methods=['GET'])
 def api_potential_projects():
     """Get a list of potential projects that didn't meet the confidence thresholds"""
     if not DIAGNOSTIC_MODE:
@@ -71,5 +71,4 @@ def diagnostic_dashboard():
     diagnostic_enabled = DIAGNOSTIC_MODE
     return render_template('diagnostic.html', diagnostic_enabled=diagnostic_enabled)
 
-# Register the blueprint with the app
-app.register_blueprint(diagnostic_bp)
+# Register the blueprint with the app happens in app.py
