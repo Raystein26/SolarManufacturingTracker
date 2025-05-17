@@ -3,36 +3,11 @@ import logging
 import time
 import datetime
 import sys
+import threading
 from app import app, db
 from models import Project, Source, NewsArticle, ScrapeLog
 from scraper import fetch_news_from_source, extract_article_content, extract_project_data
-
-# Track progress with a class to avoid circular imports
-class ProgressTracker:
-    def __init__(self):
-        self.processed_sources = 0
-        self.projects_added = 0
-        self.is_completed = False
-        self.is_in_progress = False
-        
-    def reset(self):
-        self.processed_sources = 0
-        self.projects_added = 0
-        self.is_completed = False
-        self.is_in_progress = True
-        
-    def complete(self):
-        self.is_completed = True
-        self.is_in_progress = False
-        
-    def increment_source(self):
-        self.processed_sources += 1
-        
-    def add_projects(self, count):
-        self.projects_added += count
-        
-# Create a global instance
-progress = ProgressTracker()
+from progress_tracker import progress
 
 logger = logging.getLogger(__name__)
 

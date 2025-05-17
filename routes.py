@@ -170,18 +170,33 @@ def run_check_with_progress():
 def api_check_progress():
     """Get the current progress of the scraping process"""
     # Import here to avoid circular imports
-    from project_tracker import progress
+    from progress_tracker import progress
     
-    # Get the total sources count
-    total_sources = Source.query.count()
-    
-    return jsonify({
-        'in_progress': progress.is_in_progress,
-        'processed_sources': progress.processed_sources,
-        'total_sources': total_sources,
-        'projects_added': progress.projects_added,
-        'completed': progress.is_completed
-    })
+    try:
+        # Get the total sources count
+        total_sources = Source.query.count()
+        
+        # Get state from the progress tracker
+        state = progress.get_state()
+        
+        return jsonify({
+            'in_progress': state['in_progress'],
+            'processed_sources': state['processed_sources'],
+            'total_sources': total_sources,
+            'projects_added': state['projects_added'],
+            'completed': state['completed'],
+            'error': state.get('error')
+        })
+    except Exception as e:
+        logger.error(f"Error checking progress: {str(e)}")
+        return jsonify({
+            'in_progress': False,
+            'processed_sources': 0,
+            'total_sources': 0,
+            'projects_added': 0,
+            'completed': True,
+            'error': f"Error checking progress: {str(e)}"
+        })
 
 @app.route('/api/export-excel', methods=['GET'])
 def api_export_excel():
