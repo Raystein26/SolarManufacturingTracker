@@ -287,26 +287,62 @@ def check_all_sources():
 
 def run_manual_check():
     """Run a manual check of all sources (for API endpoint)"""
-    global progress
-    
     # Reset the progress tracker
     progress.reset()
     
+    # Run the check in a separate thread to prevent blocking
+    thread = threading.Thread(target=_run_check_thread)
+    thread.daemon = True
+    thread.start()
+    
+    return {"status": "success", "message": "Check started in background"}
+    
+def _run_check_thread():
+    """Background thread to run the check process"""
     try:
-        logger.info("Starting manual check of all sources")
+        logger.info("Starting manual check of all sources in background thread")
         with app.app_context():
             # First make sure all sources are properly initialized
             # This ensures new sources are added to the database
             initialize_sources()
             logger.info("Sources initialized, beginning source check")
             
-            # Then check all sources for new content
-            check_all_sources()
+            # Get all sources first
+            sources = Source.query.all()
+            total_sources = len(sources)
+            logger.info(f"Found {total_sources} sources to check")
             
-        # Mark as completed
-        progress.complete()
-        return {"status": "success", "message": "Completed check of all sources"}
+            # Set a timeout for each source
+            max_source_time = 40  # seconds per source
+            
+            # Process each source with a timeout
+            for i, source in enumerate(sources):
+                source_start = time.time()
+                
+                try:
+                    logger.info(f"Processing source {i+1}/{total_sources}: {source.name}")
+                    check_source(source)
+                except Exception as e:
+                    logger.error(f"Error checking source {source.name}: {str(e)}")
+                    # Continue to next source even if this one fails
+                
+                # Always increment the counter, even if there was an error
+                progress.increment_source()
+                
+                # Add a small delay between sources
+                elapsed = time.time() - source_start
+                if elapsed < 3 and i < total_sources - 1:  # Don't delay after the last source
+                    time.sleep(min(3, max(0, 3 - elapsed)))
+                    
+                # Stop if we've been running too long (15 minutes total max)
+                if progress.get_state()['elapsed'] > 900:
+                    logger.warning("Stopping source check due to time limit")
+                    break
+            
+        logger.info("Completed checking all sources")
     except Exception as e:
-        logger.error(f"Error in manual check: {str(e)}")
-        progress.complete()  # Mark as completed even on error
-        return {"status": "error", "message": str(e)}
+        logger.error(f"Error in manual check thread: {str(e)}")
+        progress.set_error(str(e))
+    finally:
+        # Always mark as completed to prevent hanging UI
+        progress.complete()
