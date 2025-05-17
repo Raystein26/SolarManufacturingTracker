@@ -4,6 +4,7 @@ import logging
 import datetime
 from app import db
 from models import Project, Source, NewsArticle, ScrapeLog
+from data_processor import clean_project_name
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def export_to_excel():
             {
                 'Index': p.index,
                 'Type': p.type,
-                'Name': p.name,
+                'Name': clean_project_name(p.name),
                 'Company': p.company,
                 'Ownership': p.ownership,
                 'PLI/Non-PLI': p.pli_status,
@@ -61,7 +62,7 @@ def export_to_excel():
             {
                 'Index': p.index,
                 'Type': p.type,
-                'Name': p.name,
+                'Name': clean_project_name(p.name),
                 'Company': p.company,
                 'Ownership': p.ownership,
                 'PLI/Non-PLI': p.pli_status,
