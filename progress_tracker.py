@@ -10,12 +10,13 @@ class ProgressTracker:
     
     def __init__(self):
         self.processed_sources = 0
+        self.total_sources = 0  # Add total sources property
         self.projects_added = 0
         self.is_completed = False
         self.is_in_progress = False
         self.error = None
         self.start_time = None
-        self.max_time = 600  # 10 minutes max runtime
+        self.max_time = 1800  # 30 minutes max runtime (increased)
         self._lock = threading.Lock()
         
     def reset(self):
@@ -30,6 +31,7 @@ class ProgressTracker:
         with self._lock:
             # Now reset everything to start fresh
             self.processed_sources = 0
+            self.total_sources = 0
             self.projects_added = 0
             self.is_completed = False
             self.is_in_progress = True
@@ -88,6 +90,7 @@ class ProgressTracker:
                 'in_progress': self.is_in_progress,
                 'completed': self.is_completed,
                 'processed_sources': self.processed_sources,
+                'total_sources': self.total_sources,
                 'projects_added': self.projects_added,
                 'error': self.error,
                 'elapsed': time.time() - self.start_time if self.start_time else 0

@@ -153,9 +153,11 @@ function handleUpdateButtonClick(event) {
                                     clearInterval(progressInterval);
                                     progressBar.style.width = '100%';
                                     
-                                    // Ensure we don't show more sources than we actually have
-                                    const displayProcessedSources = Math.min(progress.processed_sources, sourceCount);
-                                    progressText.textContent = `Completed: ${displayProcessedSources}/${sourceCount} sources, ${progress.projects_added} projects added`;
+                                    // Use the total sources count from the backend
+                                    const totalSourcesCount = progress.total_sources || sourceCount;
+                                    const displayProcessedSources = progress.processed_sources;
+                                    
+                                    progressText.textContent = `Completed: ${displayProcessedSources}/${totalSourcesCount} sources, ${progress.projects_added} projects added`;
                                     
                                     // Store the final numbers
                                     projectsAdded = progress.projects_added;
@@ -189,9 +191,12 @@ function handleUpdateButtonClick(event) {
                                         }
                                     }, 1000);
                                 } else {
-                                    // Ensure we don't show more sources than we actually have
-                                    processedCount = Math.min(progress.processed_sources, sourceCount);
-                                    const percent = Math.min(100, Math.round((processedCount / sourceCount) * 100));
+                                    // Use the total sources count from the backend
+                                    const totalSourcesCount = progress.total_sources || sourceCount;
+                                    processedCount = progress.processed_sources;
+                                    
+                                    // Calculate progress percent and ensure it's capped at 100%
+                                    const percent = Math.min(100, Math.round((processedCount / totalSourcesCount) * 100));
                                     progressBar.style.width = `${percent}%`;
                                     
                                     // Check if new projects were added
@@ -209,7 +214,7 @@ function handleUpdateButtonClick(event) {
                                         }
                                     }
                                     
-                                    progressText.textContent = `Processing sources: ${processedCount}/${sourceCount}, ${progress.projects_added} projects added`;
+                                    progressText.textContent = `Processing sources: ${processedCount}/${totalSourcesCount}, ${progress.projects_added} projects added`;
                                 }
                             })
                             .catch(error => {
