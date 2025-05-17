@@ -288,10 +288,36 @@ function initializeCharts() {
     // Initialize capacity chart
     const capacityChart = document.getElementById('capacity-chart');
     if (capacityChart) {
-        const labels = ['Solar (GW)', 'Battery (GWh)'];
+        // Get all capacity data from data attributes
+        const labels = [
+            'Solar (GW)', 
+            'Wind (GW)', 
+            'Hydro (GW)', 
+            'Storage (GWh)', 
+            'H₂ (MW)', 
+            'Biogas (mmscmd)',
+            'Ethanol (ML)'
+        ];
+        
         const data = [
-            parseFloat(capacityChart.dataset.solarCapacity),
-            parseFloat(capacityChart.dataset.batteryCapacity)
+            parseFloat(capacityChart.dataset.solarCapacity || 0),
+            parseFloat(capacityChart.dataset.windCapacity || 0),
+            parseFloat(capacityChart.dataset.hydroCapacity || 0),
+            parseFloat(capacityChart.dataset.storageCapacity || 0),
+            parseFloat(capacityChart.dataset.hydrogenCapacity || 0),
+            parseFloat(capacityChart.dataset.biogasCapacity || 0),
+            parseFloat(capacityChart.dataset.ethanolCapacity || 0)
+        ];
+        
+        // Colors for different energy types
+        const backgroundColors = [
+            '#ffc107', // Solar - Yellow/Warning
+            '#20c997', // Wind - Teal 
+            '#0d6efd', // Hydro - Blue/Primary
+            '#0dcaf0', // Storage - Cyan/Info
+            '#6f42c1', // Hydrogen - Purple
+            '#198754', // Biogas - Green/Success
+            '#fd7e14'  // Ethanol - Orange
         ];
         
         new Chart(capacityChart, {
@@ -301,10 +327,7 @@ function initializeCharts() {
                 datasets: [{
                     label: 'Total Capacity',
                     data: data,
-                    backgroundColor: [
-                        '#ffc107', // Solar - Warning color
-                        '#0dcaf0'  // Battery - Info color
-                    ],
+                    backgroundColor: backgroundColors,
                     borderWidth: 1
                 }]
             },

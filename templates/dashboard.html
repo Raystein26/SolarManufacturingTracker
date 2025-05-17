@@ -61,13 +61,26 @@
             <div class="card-body text-center">
                 <canvas id="capacity-chart" height="200"
                     data-solar-capacity="{{ solar_capacity }}"
-                    data-battery-capacity="{{ battery_capacity }}">
+                    data-wind-capacity="{{ wind_capacity }}"
+                    data-hydro-capacity="{{ hydro_capacity }}"
+                    data-storage-capacity="{{ storage_capacity }}"
+                    data-hydrogen-capacity="{{ hydrogen_capacity }}"
+                    data-biogas-capacity="{{ biogas_capacity }}"
+                    data-ethanol-capacity="{{ ethanol_capacity }}">
                 </canvas>
             </div>
             <div class="card-footer text-muted">
-                <div class="d-flex justify-content-between">
-                    <small class="text-warning">Solar: {{ solar_capacity|round(2) }} GW</small>
-                    <small class="text-info">Battery: {{ battery_capacity|round(2) }} GWh</small>
+                <div class="small text-center mb-1">Renewable Energy Capacities</div>
+                <div class="d-flex flex-wrap justify-content-between">
+                    <small class="me-1"><span class="text-warning">●</span> Solar: {{ solar_capacity|round(2) }} GW</small>
+                    <small class="me-1"><span style="color:#20c997">●</span> Wind: {{ wind_capacity|round(2) }} GW</small>
+                    <small class="me-1"><span class="text-primary">●</span> Hydro: {{ hydro_capacity|round(2) }} GW</small>
+                    <small class="me-1"><span class="text-info">●</span> Storage: {{ storage_capacity|round(2) }} GWh</small>
+                </div>
+                <div class="d-flex flex-wrap justify-content-between mt-1">
+                    <small class="me-1"><span style="color:#6f42c1">●</span> H₂: {{ hydrogen_capacity|round(2) }} MW</small>
+                    <small class="me-1"><span class="text-success">●</span> Biogas: {{ biogas_capacity|round(2) }} units</small>
+                    <small><span style="color:#fd7e14">●</span> Ethanol: {{ ethanol_capacity|round(2) }} ML</small>
                 </div>
             </div>
         </div>

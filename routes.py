@@ -52,9 +52,14 @@ def dashboard():
         db.func.count(Project.id).label('count')
     ).group_by(Project.state).order_by(db.func.count(Project.id).desc()).all()
     
-    # Total capacity by type
-    solar_capacity = db.session.query(db.func.sum(Project.module_capacity)).filter_by(type='Solar').scalar() or 0
-    battery_capacity = db.session.query(db.func.sum(Project.module_capacity)).filter_by(type='Battery').scalar() or 0
+    # Total capacity by type for all renewable energy categories
+    solar_capacity = db.session.query(db.func.sum(Project.generation_capacity)).filter_by(type='Solar').scalar() or 0
+    wind_capacity = db.session.query(db.func.sum(Project.generation_capacity)).filter_by(type='Wind').scalar() or 0
+    hydro_capacity = db.session.query(db.func.sum(Project.generation_capacity)).filter_by(type='Hydro').scalar() or 0
+    storage_capacity = db.session.query(db.func.sum(Project.storage_capacity)).filter_by(type='Battery').scalar() or 0
+    hydrogen_capacity = db.session.query(db.func.sum(Project.electrolyzer_capacity)).filter_by(type='GreenHydrogen').scalar() or 0
+    biogas_capacity = db.session.query(db.func.sum(Project.biofuel_capacity)).filter_by(type='Biogas').scalar() or 0
+    ethanol_capacity = db.session.query(db.func.sum(Project.biofuel_capacity)).filter_by(type='Ethanol').scalar() or 0
     
     # Recent scrape logs
     recent_logs = ScrapeLog.query.order_by(ScrapeLog.timestamp.desc()).limit(10).all()
@@ -64,7 +69,12 @@ def dashboard():
                           projects_by_status=projects_by_status,
                           projects_by_state=projects_by_state,
                           solar_capacity=solar_capacity,
-                          battery_capacity=battery_capacity,
+                          wind_capacity=wind_capacity,
+                          hydro_capacity=hydro_capacity,
+                          storage_capacity=storage_capacity,
+                          hydrogen_capacity=hydrogen_capacity,
+                          biogas_capacity=biogas_capacity,
+                          ethanol_capacity=ethanol_capacity,
                           recent_logs=recent_logs,
                           datetime=datetime)
 
