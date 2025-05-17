@@ -68,7 +68,8 @@ def api_potential_projects():
 @diagnostic_bp.route('/', methods=['GET'])
 def diagnostic_dashboard():
     """Render the diagnostic dashboard page"""
+    from datetime import datetime
     diagnostic_enabled = DIAGNOSTIC_MODE
-    return render_template('diagnostic.html', diagnostic_enabled=diagnostic_enabled)
+    return render_template('diagnostic.html', diagnostic_enabled=diagnostic_enabled, datetime=datetime)
 
 # Register the blueprint with the app happens in app.py

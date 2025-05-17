@@ -215,6 +215,7 @@ class ProjectTypeTrainer:
         for field in category_fields:
             if field in row and pd.notna(row[field]) and field != 'type':
                 try:
+                    # Always convert to string to handle numeric types
                     category = str(row[field]).lower()
                     self.category_keywords[project_type].add(category)
                     break

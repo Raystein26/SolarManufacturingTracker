@@ -1,97 +1,45 @@
 {% extends 'base.html' %}
 
-{% block title %}Diagnostic Dashboard{% endblock %}
+{% block title %}Diagnostic Dashboard - India Renewable Energy Tracker{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row mb-4">
-        <div class="col">
-            <h1>Renewable Energy Project Diagnostics</h1>
-            <p class="lead">Analysis of potentially missed renewable energy projects by category</p>
-        </div>
-    </div>
-
+    <h1 class="mb-4">Diagnostic Dashboard</h1>
+    
     {% if not diagnostic_enabled %}
     <div class="alert alert-warning">
-        <h4 class="alert-heading">Diagnostic Mode Disabled</h4>
-        <p>The diagnostic tracking system is currently not enabled. No data collection for missed projects is taking place.</p>
+        <strong>Diagnostic mode is not enabled.</strong> Enable the diagnostic tracker to see potential projects that didn't meet confidence thresholds.
     </div>
     {% else %}
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Detection Statistics</h5>
+                    <h5 class="mb-0">Diagnostic Statistics</h5>
                 </div>
                 <div class="card-body">
-                    <div id="stats-loading" class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading diagnostic statistics...</p>
-                    </div>
-                    <div id="stats-content" class="d-none">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Potential Projects</h6>
-                                <h2 id="total-potential" class="text-primary">0</h2>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Top Categories</h6>
-                                <div id="top-categories"></div>
+                    <div id="diagnostic-stats">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
-                        <hr>
-                        <h6>Rejection Reasons</h6>
-                        <div id="rejection-reasons"></div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Category Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="category-chart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col">
-            <div class="card">
-                <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">Potential Projects</h5>
                 </div>
                 <div class="card-body">
-                    <div id="projects-loading" class="text-center">
-                        <div class="spinner-border text-secondary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading potential projects...</p>
-                    </div>
-                    <div id="projects-table-container" class="d-none">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover" id="projects-table">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Top Categories</th>
-                                        <th>Reason Rejected</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="projects-table-body">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div id="no-projects" class="d-none">
-                        <div class="alert alert-info">
-                            No potential projects have been tracked yet. This section will populate as the system processes more articles.
+                    <p class="text-muted">These are projects that weren't captured by the main system because they didn't meet the confidence thresholds.</p>
+                    <div id="potential-projects">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -103,195 +51,145 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     {% if diagnostic_enabled %}
-    // Load diagnostic statistics
-    loadDiagnosticStats();
+    // Fetch diagnostic stats
+    fetch('/diagnostic/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayDiagnosticStats(data.stats);
+            } else {
+                document.getElementById('diagnostic-stats').innerHTML = 
+                    `<div class="alert alert-danger">Error: ${data.error || 'Unknown error'}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('diagnostic-stats').innerHTML = 
+                '<div class="alert alert-danger">Failed to load diagnostic stats.</div>';
+        });
     
-    // Load potential projects
-    loadPotentialProjects();
+    // Fetch potential projects
+    fetch('/diagnostic/api/potential')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayPotentialProjects(data.projects);
+            } else {
+                document.getElementById('potential-projects').innerHTML = 
+                    `<div class="alert alert-danger">Error: ${data.error || 'Unknown error'}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('potential-projects').innerHTML = 
+                '<div class="alert alert-danger">Failed to load potential projects.</div>';
+        });
     {% endif %}
+    
+    function displayDiagnosticStats(stats) {
+        if (!stats) {
+            document.getElementById('diagnostic-stats').innerHTML = 
+                '<div class="alert alert-warning">No diagnostic statistics available.</div>';
+            return;
+        }
+        
+        let html = `
+            <div class="mb-3">
+                <h6>Tracked Potential Projects:</h6>
+                <div class="display-6">${stats.total_projects || 0}</div>
+            </div>
+            <div class="mb-3">
+                <h6>Rejection Reasons:</h6>
+                <ul class="list-group">`;
+        
+        if (stats.reasons) {
+            for (const [reason, count] of Object.entries(stats.reasons)) {
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${reason}
+                        <span class="badge bg-primary rounded-pill">${count}</span>
+                    </li>`;
+            }
+        } else {
+            html += `<li class="list-group-item">No rejection data available</li>`;
+        }
+        
+        html += `</ul>
+            </div>`;
+        
+        document.getElementById('diagnostic-stats').innerHTML = html;
+    }
+    
+    function displayPotentialProjects(projects) {
+        if (!projects || projects.length === 0) {
+            document.getElementById('potential-projects').innerHTML = 
+                '<div class="alert alert-warning">No potential projects found.</div>';
+            return;
+        }
+        
+        let html = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Score</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        for (const project of projects) {
+            // Find the highest scoring project type
+            let highestType = '';
+            let highestScore = 0;
+            
+            if (project.scores) {
+                for (const [type, score] of Object.entries(project.scores)) {
+                    if (score > highestScore) {
+                        highestScore = score;
+                        highestType = type;
+                    }
+                }
+            }
+            
+            const date = new Date(project.timestamp);
+            const formattedDate = date.toLocaleDateString();
+            
+            html += `
+                <tr class="project-row" data-url="${project.article_url}">
+                    <td>${formattedDate}</td>
+                    <td>
+                        <a href="${project.article_url}" target="_blank">${project.title || 'Unknown'}</a>
+                        <div class="text-muted small text-truncate" style="max-width: 300px;">${project.content_snippet || ''}</div>
+                    </td>
+                    <td><span class="badge bg-info">${highestType || 'Unknown'}</span></td>
+                    <td>${highestScore ? (highestScore * 100).toFixed(1) + '%' : 'N/A'}</td>
+                    <td><span class="badge bg-warning text-dark">${project.reason || 'Unknown'}</span></td>
+                </tr>`;
+        }
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>`;
+        
+        document.getElementById('potential-projects').innerHTML = html;
+        
+        // Add click handlers for project rows
+        document.querySelectorAll('.project-row').forEach(row => {
+            row.addEventListener('click', function() {
+                window.open(this.dataset.url, '_blank');
+            });
+            row.style.cursor = 'pointer';
+        });
+    }
+    
 });
-
-function loadDiagnosticStats() {
-    fetch('/api/diagnostic/stats')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                renderStats(data.stats);
-                renderCategoryChart(data.stats.top_categories);
-            } else {
-                showError('Failed to load diagnostic statistics');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading diagnostic stats:', error);
-            showError('Failed to load diagnostic statistics');
-        })
-        .finally(() => {
-            $('#stats-loading').addClass('d-none');
-            $('#stats-content').removeClass('d-none');
-        });
-}
-
-function renderStats(stats) {
-    $('#total-potential').text(stats.total);
-    
-    // Render rejection reasons
-    const reasonsContainer = $('#rejection-reasons');
-    reasonsContainer.empty();
-    
-    if (Object.keys(stats.rejection_reasons).length === 0) {
-        reasonsContainer.append('<p>No rejection data available yet</p>');
-    } else {
-        for (const [reason, count] of Object.entries(stats.rejection_reasons)) {
-            const percentage = Math.round((count / stats.total) * 100);
-            reasonsContainer.append(`
-                <div class="mb-1">${formatReason(reason)} (${count})</div>
-                <div class="progress mb-3" style="height: 15px;">
-                    <div class="progress-bar" role="progressbar" style="width: ${percentage}%;" 
-                         aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">${percentage}%</div>
-                </div>
-            `);
-        }
-    }
-    
-    // Render top categories
-    const categoriesContainer = $('#top-categories');
-    categoriesContainer.empty();
-    
-    if (Object.keys(stats.top_categories).length === 0) {
-        categoriesContainer.append('<p>No category data available yet</p>');
-    } else {
-        const sortedCategories = Object.entries(stats.top_categories)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 4);
-            
-        for (const [category, count] of sortedCategories) {
-            const percentage = Math.round((count / stats.total) * 100);
-            categoriesContainer.append(`
-                <div class="d-flex justify-content-between">
-                    <span>${category}</span>
-                    <span>${count} (${percentage}%)</span>
-                </div>
-            `);
-        }
-    }
-}
-
-function renderCategoryChart(categories) {
-    if (!categories || Object.keys(categories).length === 0) {
-        return;
-    }
-    
-    const ctx = document.getElementById('category-chart').getContext('2d');
-    
-    // Category colors
-    const colors = [
-        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-        '#6f42c1', '#fd7e14', '#20c997', '#6610f2', '#e83e8c'
-    ];
-    
-    // Sort categories by count
-    const sortedCategories = Object.entries(categories)
-        .sort((a, b) => b[1] - a[1]);
-    
-    const labels = sortedCategories.map(item => item[0]);
-    const data = sortedCategories.map(item => item[1]);
-    
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors.slice(0, labels.length),
-                hoverBackgroundColor: colors.slice(0, labels.length),
-                hoverBorderColor: "rgba(234, 236, 244, 1)",
-            }],
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                }
-            },
-            cutout: '70%',
-        },
-    });
-}
-
-function loadPotentialProjects() {
-    fetch('/api/diagnostic/potential_projects')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (data.projects.length > 0) {
-                    renderProjects(data.projects);
-                    $('#projects-table-container').removeClass('d-none');
-                } else {
-                    $('#no-projects').removeClass('d-none');
-                }
-            } else {
-                showError('Failed to load potential projects');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading potential projects:', error);
-            showError('Failed to load potential projects');
-        })
-        .finally(() => {
-            $('#projects-loading').addClass('d-none');
-        });
-}
-
-function renderProjects(projects) {
-    const tableBody = $('#projects-table-body');
-    tableBody.empty();
-    
-    projects.forEach(project => {
-        // Get top 2 categories by score
-        const topCategories = Object.entries(project.scores || {})
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 2);
-            
-        const categoryHTML = topCategories.map(cat => 
-            `<span class="badge bg-primary me-1">${cat[0]} (${cat[1]})</span>`
-        ).join('');
-        
-        // Format date
-        const date = new Date(project.timestamp);
-        const formattedDate = date.toLocaleDateString() + ' ' + 
-                              date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        
-        tableBody.append(`
-            <tr>
-                <td>
-                    <a href="${project.url}" target="_blank">${project.title}</a>
-                    <div class="small text-muted text-truncate" style="max-width: 300px;">${project.content_snippet}</div>
-                </td>
-                <td>${categoryHTML}</td>
-                <td><span class="badge bg-secondary">${formatReason(project.reason)}</span></td>
-                <td>${formattedDate}</td>
-            </tr>
-        `);
-    });
-}
-
-function formatReason(reason) {
-    if (!reason) return 'Unknown';
-    
-    // Convert snake_case to readable format
-    return reason
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function showError(message) {
-    alert(message);
-}
 </script>
 {% endblock %}

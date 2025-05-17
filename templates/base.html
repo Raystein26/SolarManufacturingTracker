@@ -64,12 +64,12 @@
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/diagnostic' %}active{% endif %}" href="/diagnostic">
+                        <a class="nav-link {% if request.path.startswith('/diagnostic') %}active{% endif %}" href="/diagnostic/">
                             <i class="fas fa-microscope me-1"></i> Diagnostics
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/training' %}active{% endif %}" href="/training/">
+                        <a class="nav-link {% if request.path.startswith('/training') %}active{% endif %}" href="/training/">
                             <i class="fas fa-graduation-cap me-1"></i> Training
                         </a>
                     </li>
