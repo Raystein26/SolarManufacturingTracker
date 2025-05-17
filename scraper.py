@@ -561,11 +561,34 @@ def determine_project_type(text):
             project_type = energy_type
     
     # THIRD CHECK: Scores must exceed minimum threshold
-    MIN_SCORE_THRESHOLD = 3
+    MIN_SCORE_THRESHOLD = 2  # Lower threshold to be more lenient with detection
     
     if highest_score < MIN_SCORE_THRESHOLD:
         logger.info(f"Article doesn't have enough specific keywords (highest score: {highest_score})")
         return None
+    
+    # Make sure we're prioritizing renewable categories if scores are close
+    # This helps ensure new categories get detected more easily
+    renewable_priorities = {
+        "Wind": 0.5,       # Add boost to Wind detection
+        "Hydro": 0.5,      # Add boost to Hydro detection
+        "GreenHydrogen": 1, # Add larger boost to Green Hydrogen
+        "Biogas": 0.5,     # Add boost to Biogas detection
+        "Ethanol": 0.5     # Add boost to Ethanol detection
+    }
+    
+    # Apply priority boosts for renewable categories we want to promote
+    for energy_type, boost in renewable_priorities.items():
+        if energy_type in type_scores:
+            type_scores[energy_type] += boost
+            
+    # Recalculate highest score after boosts
+    highest_score = 0
+    project_type = None
+    for energy_type, score in type_scores.items():
+        if score > highest_score:
+            highest_score = score
+            project_type = energy_type
     
     logger.info(f"Identified {project_type} project with score {highest_score}")
     return project_type
