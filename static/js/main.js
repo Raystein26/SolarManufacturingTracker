@@ -223,16 +223,36 @@ function initializeCharts() {
         const labels = Array.from(projectsByTypeChart.dataset.labels.split(','));
         const data = Array.from(projectsByTypeChart.dataset.values.split(','), Number);
         
+        // Create dynamic color array based on the number of project types
+        const backgroundColors = [];
+        for (let i = 0; i < labels.length; i++) {
+            // Assign standard colors based on project type
+            if (labels[i].toLowerCase().includes('solar')) {
+                backgroundColors.push('#ffc107'); // Solar - Yellow/Warning
+            } else if (labels[i].toLowerCase().includes('battery')) {
+                backgroundColors.push('#0dcaf0'); // Battery - Cyan/Info
+            } else if (labels[i].toLowerCase().includes('wind')) {
+                backgroundColors.push('#20c997'); // Wind - Teal
+            } else if (labels[i].toLowerCase().includes('hydro')) {
+                backgroundColors.push('#0d6efd'); // Hydro - Blue/Primary
+            } else if (labels[i].toLowerCase().includes('hydrogen')) {
+                backgroundColors.push('#6f42c1'); // Hydrogen - Purple
+            } else if (labels[i].toLowerCase().includes('biogas')) {
+                backgroundColors.push('#198754'); // Biogas - Green/Success
+            } else if (labels[i].toLowerCase().includes('ethanol')) {
+                backgroundColors.push('#fd7e14'); // Ethanol - Orange
+            } else {
+                backgroundColors.push('#6c757d'); // Default - Gray/Secondary
+            }
+        }
+        
         new Chart(projectsByTypeChart, {
             type: 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
                     data: data,
-                    backgroundColor: [
-                        '#ffc107', // Solar - Warning color
-                        '#0dcaf0'  // Battery - Info color
-                    ],
+                    backgroundColor: backgroundColors,
                     borderWidth: 1
                 }]
             },
