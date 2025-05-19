@@ -519,7 +519,199 @@
       "scores": {},
       "reason": "Not_India_Project",
       "timestamp": "2025-05-19T12:45:10.448170"
+    },
+    {
+      "url": "https://www.thehindu.com/subscription/freetrial/?utm_source=TheHindu&utm_medium=article&utm_campaign=FTbutton",
+      "title": "\n\tThe Hindu Subscription | Subscribe to The Hindu Digital: Renewals / New Subscriptions for Unlimited Access. - The Hindu\n",
+      "content_snippet": "\u2715\nLooks like you are already logged in from more than 3 devices!\nTo continue logging in, remove at least one device from the below list\nLog out\ndi.payload), 'all')\">Log Out from all devices\nTerms & conditions\n|\nInstitutional Subscriber\n${ ind + 1 }\n${ device }\nLast active - ${ la }",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:23.591041"
+    },
+    {
+      "url": "https://www.thehindu.com/subscription/freetrial/?utm_source=TheHindu&utm_medium=article&utm_campaign=FTbutton",
+      "title": "\n\tThe Hindu Subscription | Subscribe to The Hindu Digital: Renewals / New Subscriptions for Unlimited Access. - The Hindu\n",
+      "content_snippet": "\u2715\nLooks like you are already logged in from more than 3 devices!\nTo continue logging in, remove at least one device from the below list\nLog out\ndi.payload), 'all')\">Log Out from all devices\nTerms & conditions\n|\nInstitutional Subscriber\n${ ind + 1 }\n${ device }\nLast active - ${ la }",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:23.691835"
+    },
+    {
+      "url": "https://www.thehindu.com/topic/live-news/",
+      "title": "\n\tLive news today from The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:24.665427"
+    },
+    {
+      "url": "https://www.thehindu.com/topic/live-news/",
+      "title": "\n\tLive news today from The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:25.373137"
+    },
+    {
+      "url": "https://www.thehindu.com/news/",
+      "title": "\n\tNews: Today\u2019s News update from The Hindu - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:25.445173"
+    },
+    {
+      "url": "https://www.thehindu.com/news/",
+      "title": "\n\tNews: Today\u2019s News update from The Hindu - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:25.991213"
+    },
+    {
+      "url": "https://www.thehindu.com/news/national/",
+      "title": "\n\tIndia Latest News: Top National Headlines Today & Breaking News - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:27.198925"
+    },
+    {
+      "url": "https://www.thehindu.com/news/national/",
+      "title": "\n\tIndia Latest News: Top National Headlines Today & Breaking News - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:27.340033"
+    },
+    {
+      "url": "https://www.thehindu.com/news/international/",
+      "title": "\n\tWorld News Today: International News Headlines - The Hindu - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:28.190449"
+    },
+    {
+      "url": "https://www.thehindu.com/news/international/",
+      "title": "\n\tWorld News Today: International News Headlines - The Hindu - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:28.885657"
+    },
+    {
+      "url": "https://www.thehindu.com/news/states/",
+      "title": "\n\tState News and Updates | Latest Updates from Different States - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:29.723343"
+    },
+    {
+      "url": "https://www.thehindu.com/news/states/",
+      "title": "\n\tState News and Updates | Latest Updates from Different States - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:30.362422"
+    },
+    {
+      "url": "https://www.thehindu.com/news/cities/",
+      "title": "\n\tNews from Major Indian Metropolitan Cities Today - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:31.282395"
+    },
+    {
+      "url": "https://www.thehindu.com/news/cities/",
+      "title": "\n\tNews from Major Indian Metropolitan Cities Today - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:31.942295"
+    },
+    {
+      "url": "https://www.thehindu.com/newsletter/newsletter-international/?utm_source=vfi_preview_link&utm_medium=website_nl-sub_page&utm_campaign=newsletter_signup",
+      "title": "Latest The View From India News",
+      "content_snippet": "Tackling or deterring terror?\n\nCHENNAI, TAMIL NADU, 14/05/2025 : Bharatiya Janata Party (BJP) president Nainar Nagenthran (not in picture) along with party cadres takes out a \u2018Tiranga Yatra\u2019 following the success of Operation Sindoor in support of Indian Armed Forces held in Chennai on Wednesday. Photo : B. Jothi Ramalingam / The Hindu | Photo Credit: JOTHI RAMALINGAM B\n\nNearly a month after the brutal terrorist attack in which 26 men, mostly tourists, were killed in Pahalgam, Jammu and Kashmir,",
+      "scores": {
+        "Solar": 0.0,
+        "Battery": 0.0,
+        "Wind": 0.0,
+        "Hydro": 1.0,
+        "GreenHydrogen": 0.0,
+        "Biogas": 0.0,
+        "Ethanol": 0.0
+      },
+      "reason": "Not_Renewable_Energy_Project",
+      "timestamp": "2025-05-19T13:09:32.597439"
+    },
+    {
+      "url": "https://www.thehindu.com/newsletter/newsletter-international/?utm_source=vfi_preview_link&utm_medium=website_nl-sub_page&utm_campaign=newsletter_signup",
+      "title": "Latest The View From India News",
+      "content_snippet": "Tackling or deterring terror?\n\nCHENNAI, TAMIL NADU, 14/05/2025 : Bharatiya Janata Party (BJP) president Nainar Nagenthran (not in picture) along with party cadres takes out a \u2018Tiranga Yatra\u2019 following the success of Operation Sindoor in support of Indian Armed Forces held in Chennai on Wednesday. Photo : B. Jothi Ramalingam / The Hindu | Photo Credit: JOTHI RAMALINGAM B\n\nNearly a month after the brutal terrorist attack in which 26 men, mostly tourists, were killed in Pahalgam, Jammu and Kashmir,",
+      "scores": {
+        "Solar": 0.0,
+        "Battery": 0.0,
+        "Wind": 0.0,
+        "Hydro": 1.0,
+        "GreenHydrogen": 0.0,
+        "Biogas": 0.0,
+        "Ethanol": 0.0
+      },
+      "reason": "Not_Renewable_Energy_Project",
+      "timestamp": "2025-05-19T13:09:33.168533"
+    },
+    {
+      "url": "https://www.thehindu.com/newsletter-subscription/?utm_source=site_menu&utm_medium=website&utm_campaign=newsletter_signup",
+      "title": "Newsletter Subscription",
+      "content_snippet": "From the day's news agenda to the intricacies of diplomacy and the latest on cinema, The Hindu delivers the best of news and analysis to your inbox. Click on your choice of newsletters below, enter your email address and click subscribe.\n\nFrom the day's news agenda to the intricacies of diplomacy The Hindu delivers the best of news and analysis to your inbox.",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:33.352918"
+    },
+    {
+      "url": "https://www.thehindu.com/newsletter-subscription/?utm_source=site_menu&utm_medium=website&utm_campaign=newsletter_signup",
+      "title": "Newsletter Subscription",
+      "content_snippet": "From the day's news agenda to the intricacies of diplomacy and the latest on cinema, The Hindu delivers the best of news and analysis to your inbox. Click on your choice of newsletters below, enter your email address and click subscribe.\n\nFrom the day's news agenda to the intricacies of diplomacy The Hindu delivers the best of news and analysis to your inbox.",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:33.617440"
+    },
+    {
+      "url": "https://www.thehindu.com/news/national/andhra-pradesh/",
+      "title": "\n\tAndhra Pradesh - Latest news, Live Updates, Politics, Events - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:34.994467"
+    },
+    {
+      "url": "https://www.thehindu.com/news/national/andhra-pradesh/",
+      "title": "\n\tAndhra Pradesh - Latest news, Live Updates, Politics, Events - The Hindu\n",
+      "content_snippet": "Sign in to unlock member-only benefits!\n- Access 10 free stories every month\n- Save stories to read later\n- Access to comment on every story\n- Sign-up/manage your newsletter subscriptions with a single click\n- Get notified by email for early access to discounts & offers on our products",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:09:35.275245"
+    },
+    {
+      "url": "https://www.energy-storage.news/chile-and-china-lead-global-bess-deployments-in-april/",
+      "title": "Chile and China lead global BESS deployments in April - Energy-Storage.News",
+      "content_snippet": "Chile, China and Australia drove global BESS deployments in April, a month which saw over 9GWh of grid-scale capacity enter commercial operations.\nThat\u2019s according to market intelligence firm Rho Motion\u2019s Battery Energy Stationary Storage Monthly Database, which shows that global deployments were more evenly distributed than during the first three months of the year.\nEnjoy 12 months of exclusive analysis\n- Regular insight and analysis of the industry\u2019s biggest developments\n- In-depth interviews ",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:10:45.701017"
+    },
+    {
+      "url": "https://www.energy-storage.news/chile-and-china-lead-global-bess-deployments-in-april/",
+      "title": "Chile and China lead global BESS deployments in April - Energy-Storage.News",
+      "content_snippet": "Chile, China and Australia drove global BESS deployments in April, a month which saw over 9GWh of grid-scale capacity enter commercial operations.\nThat\u2019s according to market intelligence firm Rho Motion\u2019s Battery Energy Stationary Storage Monthly Database, which shows that global deployments were more evenly distributed than during the first three months of the year.\nEnjoy 12 months of exclusive analysis\n- Regular insight and analysis of the industry\u2019s biggest developments\n- In-depth interviews ",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T13:10:45.822594"
     }
   ],
-  "last_updated": "2025-05-19T12:45:10.448393"
+  "last_updated": "2025-05-19T13:10:45.822710"
 }
