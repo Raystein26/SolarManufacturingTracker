@@ -295,12 +295,14 @@ def determine_project_type(text):
     # Preprocess text
     text = preprocess_text(text)
     
-    # Define keywords and patterns for each project type
+    # Define keywords and patterns for each project type with enhanced solar patterns
     type_patterns = {
         'solar': [
-            r'\bsolar\s+(?:power|energy|plant|project|farm|park|capacity|manufacturing|pv)',
-            r'\bphotovoltaic\b', r'\bsolar\s+panel', r'\bsolar\s+module',
-            r'\bpv\s+(?:project|plant|farm|park|manufacturing)'
+            r'\bsolar\s+(?:power|energy|plant|project|farm|park|capacity|manufacturing|pv|cell|module|wafer|ingot)',
+            r'\bphotovoltaic\b', r'\bsolar\s+panel', r'\bsolar\s+module', r'\bsolar\s+manufacturing',
+            r'\bpv\s+(?:project|plant|farm|park|manufacturing)', r'\brooftop\s+solar',
+            r'\bsolar\s+capacity', r'\bsolar\s+generation', r'\bsolar\s+installation',
+            r'\bmw\s+(?:solar|pv)', r'\bgw\s+(?:solar|pv)', r'\brenewable\s+(?:energy|power)\b.*\bsolar\b'
         ],
         'battery': [
             r'\bbattery\s+(?:storage|plant|manufacturing|gigafactory|production)',
@@ -407,9 +409,12 @@ def extract_project_data(article_url, content=None):
             max_score = score
             project_type = type_name
     
+    # More lenient threshold for solar projects, stricter for others
+    min_threshold = 0.3 if project_type == 'solar' else 0.4
+    
     # Reject if no strong project type identified
-    if max_score < 0.4:
-        logger.info(f"Article rejected: Not about a renewable energy project (max score: {max_score})")
+    if max_score < min_threshold:
+        logger.info(f"Article rejected: Not about a renewable energy project (max score: {max_score}, type: {project_type})")
         
         # Track potential misses for diagnostics
         try:
@@ -419,7 +424,7 @@ def extract_project_data(article_url, content=None):
                 title or "Unknown Title",
                 content[:500] + "...",
                 project_type_scores,
-                f"Low confidence in project type (max score: {max_score})"
+                f"Low confidence in project type (max score: {max_score}, type: {project_type})"
             )
             logger.info(f"Tracked as potential miss in diagnostic tracker")
         except ImportError:
@@ -427,10 +432,26 @@ def extract_project_data(article_url, content=None):
         
         return None
     
-    # Check if it's a pipeline project
+    # Check if it's a pipeline project - be more lenient for solar projects
     pipeline_score = is_pipeline_project(content)
-    if pipeline_score < 0.4:
-        logger.info(f"Article rejected: Not about a pipeline project (score: {pipeline_score})")
+    min_pipeline_threshold = 0.3 if project_type == 'solar' else 0.4
+    
+    if pipeline_score < min_pipeline_threshold:
+        logger.info(f"Article rejected: Not about a pipeline project (score: {pipeline_score}, type: {project_type})")
+        
+        # Track as potential pipeline project in diagnostics
+        try:
+            from diagnostic_tracker import diagnostic_tracker
+            diagnostic_tracker.track_potential_project(
+                article_url,
+                title or "Unknown Title",
+                content[:500] + "...",
+                {"pipeline_score": pipeline_score},
+                f"Not a pipeline project (score: {pipeline_score}, type: {project_type})"
+            )
+        except ImportError:
+            pass
+            
         return None
     
     # Use NLP-based entity recognition to extract detailed information
