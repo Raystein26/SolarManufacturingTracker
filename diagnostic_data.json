@@ -335,7 +335,55 @@
       "scores": {},
       "reason": "Not_India_Project",
       "timestamp": "2025-05-19T09:29:10.887763"
+    },
+    {
+      "url": "https://mercomindia.com/aptel-rules-ntpc-not-responsible-for-meter-sealing-in-solar-project",
+      "title": "APTEL Rules NTPC Not Responsible for Meter Sealing in Solar Project",
+      "content_snippet": "The Appellate Tribunal for Electricity (APTEL) has partially set aside a Central Electricity Regulatory Commission (CERC) order, clarifying that NTPC cannot be held responsible for sealing meters under solar power purchase agreements.\n\nIt ruled that this responsibility lies with the generating companies or transmission/distribution licensees.\n\nBackground\n\nUnder the National Solar Mission, the State Specific Bundling Scheme was launched to promote grid-connected solar power projects. The appellan",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T11:53:58.076487"
+    },
+    {
+      "url": "https://mercomindia.com/pserc-approves-additional-surcharge-for-partial-and-full-open-access-power-consumers",
+      "title": "PSERC Approves Additional Surcharge for Partial and Full Open Access Power Consumers",
+      "content_snippet": "The Punjab State Electricity Regulatory Commission (PSERC) has accepted the Punjab State Power Corporation (PSPCL)\u2019s request to approve an additional surcharge of \u20b91.22 (~$0.014)/kWh for full open access consumers and \u20b90.83 (~$0.009)/kWh for partial open access power consumers.\n\nThe additional surcharge will be levied on all consumers within the power supply area of PSPCL, provided the contracted capacity of the distribution company (DISCOM) remains stranded during the period.\n\nBackground\n\nThe p",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T11:53:59.348516"
+    },
+    {
+      "url": "https://mercomindia.com/mnre-clarifies-net-billing-and-metering-provisions-under-almm",
+      "title": "MNRE Clarifies Net Billing and Metering Provisions Under ALMM",
+      "content_snippet": "The Ministry of New and Renewable Energy (MNRE) has clarified that net billing, and virtual and group net metering will also be treated on a par with net metering provisions under the Approved List of Models and Manufacturers (ALMM) List-II.\n\nList-II applies to solar cells which will be brought under the ambit of ALMM from June 2026. The inclusion of solar cells in ALMM addresses the growing domestic production capacity. Until now, only solar modules have been covered in the ALMM.\n\nThe Ministry ",
+      "scores": {
+        "Solar": 3.0,
+        "Battery": 1.0,
+        "Wind": 0.0,
+        "Hydro": 0.0,
+        "GreenHydrogen": 0.0,
+        "Biogas": 0.0,
+        "Ethanol": 0.0
+      },
+      "reason": "Not_Renewable_Energy_Project",
+      "timestamp": "2025-05-19T11:53:59.918696"
+    },
+    {
+      "url": "https://www.energy-storage.news/solving-energy-storages-key-challenges-with-goldwinds-grid-forming-dc-and-ac-solutions/",
+      "title": "Solving energy storage industry's key challenges with Goldwind",
+      "content_snippet": "Goldwind discusses how its unmatched system-level expertise from the renewables space makes it ideally placed to solve the key industry challenges it sees emerging in energy storage.\nSpeaking to Energy-Storage.news at ees Europe in Germany a fortnight ago, Beijing-headquartered Goldwind Carbon Neutral chairman Yantian (Tony) Pan discussed the company\u2019s background in wind, and how that enables it to bridge the technical and commercial gaps in the storage industry today.\nEnjoy 12 months of exclusi",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T11:54:51.022022"
+    },
+    {
+      "url": "https://www.energy-storage.news/elements-green-receives-gps-approval-for-1-3gwh-solar-plus-storage-site-in-queensland-australia/",
+      "title": "Elements Green receives GPS approval for 1.3GWh solar-plus-storage site in Queensland, Australia",
+      "content_snippet": "Elements Green claims this is Australia\u2019s largest solar and battery energy storage project to have received Generator Performance Standard (GPS) approval. It will couple 696MWp of solar PV generation with a 666MW/1,332MWh battery energy storage system (BESS).\n\nThe hybrid facility will be located within the proposed Central Queensland renewable energy zone (REZ), approximately 50km southeast of Gladstone. Queensland is set to pursue the development of 12 REZ across the state to support the deploy",
+      "scores": {},
+      "reason": "Not_India_Project",
+      "timestamp": "2025-05-19T11:54:51.616206"
     }
   ],
-  "last_updated": "2025-05-19T09:29:10.887950"
+  "last_updated": "2025-05-19T11:54:51.616421"
 }
