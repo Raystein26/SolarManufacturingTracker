@@ -88,7 +88,7 @@ def fetch_news_from_source(source_url):
 def extract_article_content(article_url):
     """
     Extract content from an article using the best available method
-    Returns the article content and title
+    Returns a dictionary with 'text' and 'title' keys for compatibility with project_tracker
     """
     content = None
     title = None
@@ -104,7 +104,12 @@ def extract_article_content(article_url):
         
         # Return early if we have good content
         if content and len(content) > 200:
-            return content, title
+            return {
+                'text': content,
+                'title': title,
+                'url': article_url,
+                'publish_date': article.publish_date
+            }
             
     except Exception as e:
         logger.error(f"Error extracting with newspaper: {e} on URL {article_url}")
@@ -128,15 +133,25 @@ def extract_article_content(article_url):
     # If both methods fail, try alternative extraction with BeautifulSoup
     if not content or len(content) < 200:
         try:
-            content, title = extract_article_content_alternative(article_url)
+            alt_content, alt_title = extract_article_content_alternative(article_url)
+            if alt_content:
+                content = alt_content
+                if alt_title:
+                    title = alt_title
         except Exception as e:
             logger.error(f"Error extracting with alternative method: {e}")
     
     if not content:
         logger.warning(f"Failed to extract content from {article_url}")
-        return None, None
+        return None
         
-    return content, title
+    # Return in dictionary format for compatibility
+    return {
+        'text': content,
+        'title': title if title else "Untitled Article",
+        'url': article_url,
+        'publish_date': datetime.datetime.now()
+    }
 
 def extract_article_content_alternative(article_url):
     """
