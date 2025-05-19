@@ -1,13 +1,12 @@
 """
-Enhanced scraper with training-based category detection and NLP-based entity recognition 
-for renewable energy projects. This module integrates spaCy for advanced entity extraction
-and the training module for better detection of diverse energy types.
+Enhanced scraper with training-based category detection for renewable energy projects.
+This module integrates the training module for better detection of diverse energy types.
 """
 
 import os
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 import newspaper
 from newspaper import Article
 import trafilatura
@@ -16,9 +15,8 @@ import requests
 from collections import defaultdict
 import nltk
 
-# Import the training module and NLP processor
+# Import the training module
 from training_module import ProjectTypeTrainer
-from nlp_processor import analyze_project_text
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -88,7 +86,7 @@ def fetch_news_from_source(source_url):
 def extract_article_content(article_url):
     """
     Extract content from an article using the best available method
-    Returns a dictionary with 'text' and 'title' keys for compatibility with project_tracker
+    Returns the article content and title
     """
     content = None
     title = None
@@ -104,12 +102,7 @@ def extract_article_content(article_url):
         
         # Return early if we have good content
         if content and len(content) > 200:
-            return {
-                'text': content,
-                'title': title,
-                'url': article_url,
-                'publish_date': article.publish_date
-            }
+            return content, title
             
     except Exception as e:
         logger.error(f"Error extracting with newspaper: {e} on URL {article_url}")
@@ -133,25 +126,15 @@ def extract_article_content(article_url):
     # If both methods fail, try alternative extraction with BeautifulSoup
     if not content or len(content) < 200:
         try:
-            alt_content, alt_title = extract_article_content_alternative(article_url)
-            if alt_content:
-                content = alt_content
-                if alt_title:
-                    title = alt_title
+            content, title = extract_article_content_alternative(article_url)
         except Exception as e:
             logger.error(f"Error extracting with alternative method: {e}")
     
     if not content:
         logger.warning(f"Failed to extract content from {article_url}")
-        return None
+        return None, None
         
-    # Return in dictionary format for compatibility
-    return {
-        'text': content,
-        'title': title if title else "Untitled Article",
-        'url': article_url,
-        'publish_date': datetime.datetime.now()
-    }
+    return content, title
 
 def extract_article_content_alternative(article_url):
     """
@@ -310,14 +293,12 @@ def determine_project_type(text):
     # Preprocess text
     text = preprocess_text(text)
     
-    # Define keywords and patterns for each project type with enhanced solar patterns
+    # Define keywords and patterns for each project type
     type_patterns = {
         'solar': [
-            r'\bsolar\s+(?:power|energy|plant|project|farm|park|capacity|manufacturing|pv|cell|module|wafer|ingot)',
-            r'\bphotovoltaic\b', r'\bsolar\s+panel', r'\bsolar\s+module', r'\bsolar\s+manufacturing',
-            r'\bpv\s+(?:project|plant|farm|park|manufacturing)', r'\brooftop\s+solar',
-            r'\bsolar\s+capacity', r'\bsolar\s+generation', r'\bsolar\s+installation',
-            r'\bmw\s+(?:solar|pv)', r'\bgw\s+(?:solar|pv)', r'\brenewable\s+(?:energy|power)\b.*\bsolar\b'
+            r'\bsolar\s+(?:power|energy|plant|project|farm|park|capacity|manufacturing|pv)',
+            r'\bphotovoltaic\b', r'\bsolar\s+panel', r'\bsolar\s+module',
+            r'\bpv\s+(?:project|plant|farm|park|manufacturing)'
         ],
         'battery': [
             r'\bbattery\s+(?:storage|plant|manufacturing|gigafactory|production)',
@@ -381,7 +362,7 @@ def determine_project_type(text):
 
 def extract_project_data(article_url, content=None):
     """
-    Extract project data from an article using NLP-based entity recognition
+    Extract project data from an article
     
     Args:
         article_url: URL of the article
@@ -424,12 +405,9 @@ def extract_project_data(article_url, content=None):
             max_score = score
             project_type = type_name
     
-    # More lenient threshold for solar projects, stricter for others
-    min_threshold = 0.3 if project_type == 'solar' else 0.4
-    
     # Reject if no strong project type identified
-    if max_score < min_threshold:
-        logger.info(f"Article rejected: Not about a renewable energy project (max score: {max_score}, type: {project_type})")
+    if max_score < 0.4:
+        logger.info(f"Article rejected: Not about a renewable energy project (max score: {max_score})")
         
         # Track potential misses for diagnostics
         try:
@@ -439,7 +417,7 @@ def extract_project_data(article_url, content=None):
                 title or "Unknown Title",
                 content[:500] + "...",
                 project_type_scores,
-                f"Low confidence in project type (max score: {max_score}, type: {project_type})"
+                f"Low confidence in project type (max score: {max_score})"
             )
             logger.info(f"Tracked as potential miss in diagnostic tracker")
         except ImportError:
@@ -447,188 +425,43 @@ def extract_project_data(article_url, content=None):
         
         return None
     
-    # Check if it's a pipeline project - be more lenient for solar projects
+    # Check if it's a pipeline project
     pipeline_score = is_pipeline_project(content)
-    min_pipeline_threshold = 0.3 if project_type == 'solar' else 0.4
-    
-    if pipeline_score < min_pipeline_threshold:
-        logger.info(f"Article rejected: Not about a pipeline project (score: {pipeline_score}, type: {project_type})")
-        
-        # Track as potential pipeline project in diagnostics
-        try:
-            from diagnostic_tracker import diagnostic_tracker
-            diagnostic_tracker.track_potential_project(
-                article_url,
-                title or "Unknown Title",
-                content[:500] + "...",
-                {"pipeline_score": pipeline_score},
-                f"Not a pipeline project (score: {pipeline_score}, type: {project_type})"
-            )
-        except ImportError:
-            pass
-            
+    if pipeline_score < 0.4:
+        logger.info(f"Article rejected: Not about a pipeline project (score: {pipeline_score})")
         return None
     
-    # Use NLP-based entity recognition to extract detailed information
-    try:
-        nlp_results = analyze_project_text(content, title)
-        logger.info(f"NLP entity extraction complete for {article_url}")
-    except Exception as e:
-        logger.error(f"Error in NLP processing: {e}")
-        nlp_results = {}
-    
-    # Extract project details based on identified type and NLP results
-    # Format project data to be compatible with both traditional and enhanced keys expected by project_tracker.py
+    # Extract project details based on identified type
     project_data = {
-        # Lowercase keys (enhanced scraper format)
-        'type': project_type.capitalize() if project_type else 'Unknown',
-        'name': (nlp_results.get('project_name') if nlp_results else None) or extract_project_name(content, title),
-        'company': nlp_results.get('companies')[0] if nlp_results and nlp_results.get('companies') else extract_company(content),
-        'location': nlp_results.get('location')[0] if nlp_results and nlp_results.get('location') else extract_location(content),
-        'state': nlp_results.get('state') if nlp_results else None,
+        'type': project_type.capitalize(),
+        'name': extract_project_name(content, title),
+        'company': extract_company(content),
+        'location': extract_location(content),
         'source': article_url,
-        'announcement_date': datetime.now().strftime('%Y-%m-%d'),
-        'category': 'Generation' if project_type in ['solar', 'wind', 'hydro'] else 'Storage' if project_type == 'battery' else 'Production',
-        
-        # Capitalized keys (traditional format for project_tracker.py compatibility)
-        'Type': project_type.capitalize() if project_type else 'Unknown',
-        'Name': (nlp_results.get('project_name') if nlp_results else None) or extract_project_name(content, title),
-        'Company': nlp_results.get('companies')[0] if nlp_results and nlp_results.get('companies') else extract_company(content),
-        'Location': nlp_results.get('location')[0] if nlp_results and nlp_results.get('location') else extract_location(content),
-        'State': nlp_results.get('state') if nlp_results else None,
-        'Source': article_url,
-        'Announcement Date': datetime.now().strftime('%Y-%m-%d'),
-        'Category': 'Generation' if project_type in ['solar', 'wind', 'hydro'] else 'Storage' if project_type == 'battery' else 'Production',
-        'Status': 'Announced'
+        'announcement_date': datetime.now().strftime('%Y-%m-%d')
     }
-    
-    # Extract investment data if available from NLP
-    if nlp_results and nlp_results.get('investment'):
-        try:
-            investment = nlp_results['investment']
-            if investment.get('currency') == 'USD':
-                project_data['investment_usd'] = investment.get('value', 0)
-                project_data['Investment USD'] = investment.get('value', 0)
-            else:  # INR
-                project_data['investment_inr'] = investment.get('value', 0)
-                project_data['Investment INR'] = investment.get('value', 0)
-        except Exception as e:
-            logger.error(f"Error processing investment data: {e}")
-    
-    # Extract completion date if available
-    if nlp_results and nlp_results.get('completion_date'):
-        try:
-            project_data['expected_completion'] = nlp_results['completion_date']
-            project_data['Expected Completion'] = nlp_results['completion_date']
-        except Exception as e:
-            logger.error(f"Error processing completion date: {e}")
-            
-    # Extract capacity information from NLP results if available
-    if nlp_results and nlp_results.get('capacities') and len(nlp_results['capacities']) > 0:
-        try:
-            for capacity in nlp_results['capacities']:
-                unit = capacity.get('unit', '').upper() if capacity.get('unit') else ''
-                value = capacity.get('value', 0)
-                
-                # Determine which capacity field to update based on unit
-                if 'GW' in unit or 'MW' in unit or 'KW' in unit:
-                    if 'H' not in unit:  # Power capacity (not energy storage)
-                        # Update both lowercase and uppercase keys
-                        project_data['generation_capacity'] = value if 'GW' in unit else value/1000 if 'MW' in unit else value/1000000
-                        project_data['Generation Capacity'] = value if 'GW' in unit else value/1000 if 'MW' in unit else value/1000000
-                        project_data['Capacity'] = value if 'GW' in unit else value/1000 if 'MW' in unit else value/1000000  # For backward compatibility
-                    else:  # Energy storage
-                        # Update both lowercase and uppercase keys
-                        project_data['storage_capacity'] = value if 'GWH' in unit else value/1000 if 'MWH' in unit else value/1000000
-                        project_data['Storage Capacity'] = value if 'GWH' in unit else value/1000 if 'MWH' in unit else value/1000000
-                        project_data['Capacity'] = value if 'GWH' in unit else value/1000 if 'MWH' in unit else value/1000000  # For backward compatibility
-                
-                # Special cases for different project types
-                if project_type == 'hydrogen' and ('TON' in unit or 'TONNE' in unit):
-                    project_data['hydrogen_production'] = value
-                    project_data['Hydrogen Production'] = value
-                elif project_type == 'biofuel' and ('LITER' in unit or 'LITRE' in unit):
-                    project_data['biofuel_capacity'] = value
-                    project_data['Biofuel Capacity'] = value
-        except Exception as e:
-            logger.error(f"Error processing capacity data: {e}")
     
     # Extract capacity based on project type
     if project_type == 'solar':
-        solar_capacity = extract_solar_capacity(content)
-        project_data.update(solar_capacity)
-        # Add uppercase keys for project_tracker.py compatibility
-        for key, value in solar_capacity.items():
-            if key == 'generation_capacity':
-                project_data['Generation Capacity'] = value
-                project_data['Capacity'] = value  # For backward compatibility
-            elif key == 'module_capacity':
-                project_data['Module Capacity'] = value
-            elif key == 'cell_capacity':
-                project_data['Cell Capacity'] = value
+        project_data.update(extract_solar_capacity(content))
     elif project_type == 'battery':
-        battery_capacity = extract_battery_capacity(content)
-        project_data.update(battery_capacity)
-        # Add uppercase keys for project_tracker.py compatibility
-        for key, value in battery_capacity.items():
-            if key == 'storage_capacity':
-                project_data['Storage Capacity'] = value
-                project_data['Capacity'] = value  # For backward compatibility
-            elif key == 'cell_capacity':
-                project_data['Cell Capacity'] = value
-            elif key == 'module_capacity':
-                project_data['Module Capacity'] = value
+        project_data.update(extract_battery_capacity(content))
     elif project_type == 'wind':
-        wind_capacity = extract_wind_capacity(content)
-        project_data.update(wind_capacity)
-        # Add uppercase keys for project_tracker.py compatibility
-        for key, value in wind_capacity.items():
-            if key == 'generation_capacity':
-                project_data['Generation Capacity'] = value
-                project_data['Capacity'] = value  # For backward compatibility
+        project_data.update(extract_wind_capacity(content))
     elif project_type == 'hydro':
-        hydro_capacity = extract_hydro_capacity(content)
-        project_data.update(hydro_capacity)
-        # Add uppercase keys for project_tracker.py compatibility
-        for key, value in hydro_capacity.items():
-            if key == 'generation_capacity':
-                project_data['Generation Capacity'] = value
-                project_data['Capacity'] = value  # For backward compatibility
+        project_data.update(extract_hydro_capacity(content))
     elif project_type == 'hydrogen':
-        hydrogen_capacity = extract_hydrogen_capacity(content)
-        project_data.update(hydrogen_capacity)
-        # Add uppercase keys for project_tracker.py compatibility
-        for key, value in hydrogen_capacity.items():
-            if key == 'electrolyzer_capacity':
-                project_data['Electrolyzer Capacity'] = value
-            elif key == 'hydrogen_production':
-                project_data['Hydrogen Production'] = value
+        project_data.update(extract_hydrogen_capacity(content))
     elif project_type == 'biofuel':
-        biofuel_capacity = extract_biofuel_capacity(content)
-        project_data.update(biofuel_capacity)
-        # Add uppercase keys for project_tracker.py compatibility
-        for key, value in biofuel_capacity.items():
-            if key == 'biofuel_capacity':
-                project_data['Biofuel Capacity'] = value
-                project_data['Capacity'] = value  # For backward compatibility
+        project_data.update(extract_biofuel_capacity(content))
     
     # Extract investment information
-    investment_info = extract_investment(content)
-    project_data.update(investment_info)
-    # Add uppercase keys for project_tracker.py compatibility
-    for key, value in investment_info.items():
-        if key == 'investment_usd':
-            project_data['Investment USD'] = value
-        elif key == 'investment_inr':
-            project_data['Investment INR'] = value
+    project_data.update(extract_investment(content))
     
     # Set expected completion
-    completion_date = extract_completion_date(content)
-    if completion_date:
-        project_data['expected_completion'] = completion_date
-        project_data['Expected Completion'] = completion_date
+    project_data['expected_completion'] = extract_completion_date(content)
     
-    logger.info(f"Extracted project data for {project_type} project: {project_data.get('name', 'Unknown')}")
+    logger.info(f"Extracted project data for {project_type} project: {project_data['name']}")
     return project_data
 
 def extract_project_name(content, title=None):

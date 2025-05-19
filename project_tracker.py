@@ -201,15 +201,9 @@ def check_source(source):
                 if project_data:
                     # Check if project already exists with similar name and company
                     try:
-                        # Handle both traditional and new enhanced format keys
-                        project_name = project_data.get('Name', project_data.get('name', ''))
-                        project_company = project_data.get('Company', project_data.get('company', ''))
-                        
-                        logger.info(f"Checking for existing project: {project_name} by {project_company}")
-                        
                         existing_projects = Project.query.filter(
-                            Project.name.ilike(f"%{project_name}%"),
-                            Project.company.ilike(f"%{project_company}%")
+                            Project.name.ilike(f"%{project_data['Name']}%"),
+                            Project.company.ilike(f"%{project_data['Company']}%")
                         ).all()
                     except Exception as e:
                         logger.error(f"Error querying existing projects: {str(e)}")
@@ -221,76 +215,42 @@ def check_source(source):
                             max_index = db.session.query(db.func.max(Project.index)).scalar() or 0
                             next_index = max_index + 1
                             
-                            # Format dates - handle all possible date formats
-                            announcement_date_raw = project_data.get("Announcement Date", project_data.get("announcement_date"))
-                            
-                            if isinstance(announcement_date_raw, str):
+                            # Format dates
+                            if isinstance(project_data.get("Announcement Date"), str):
                                 try:
-                                    # Try multiple date formats
-                                    for date_format in ["%d-%m-%Y", "%Y-%m-%d", "%B %d, %Y", "%d %B %Y"]:
-                                        try:
-                                            announcement_date = datetime.datetime.strptime(announcement_date_raw, date_format).date()
-                                            break
-                                        except ValueError:
-                                            continue
-                                    else:  # No format matched
-                                        announcement_date = datetime.datetime.now().date()
-                                except Exception:
+                                    announcement_date = datetime.datetime.strptime(
+                                        project_data["Announcement Date"], "%d-%m-%Y"
+                                    ).date()
+                                except ValueError:
                                     announcement_date = datetime.datetime.now().date()
                             else:
                                 announcement_date = datetime.datetime.now().date()
-                                
-                            logger.info(f"Using announcement date: {announcement_date} from {announcement_date_raw}")
                             
                             # Create new project with separate attribute assignment
                             new_project = Project()
                             new_project.index = next_index
-                            
-                            # Handle both traditional and enhanced scraper formats
-                            # Type field
-                            new_project.type = project_data.get("Type", project_data.get("type", "Unknown"))
-                            
-                            # Name field
-                            new_project.name = project_data.get("Name", project_data.get("name", "Unknown Project"))
-                            
-                            # Company field
-                            new_project.company = project_data.get("Company", project_data.get("company", "Unknown"))
-                            
-                            # Optional fields with defaults
-                            new_project.ownership = project_data.get("Ownership", project_data.get("ownership", "Private"))
-                            new_project.pli_status = project_data.get("PLI/Non-PLI", project_data.get("pli_status", "Non-PLI"))
-                            
-                            # Location information
-                            new_project.state = project_data.get("State", project_data.get("state", ""))
-                            new_project.location = project_data.get("Location", project_data.get("location", ""))
-                            
-                            # Dates
+                            new_project.type = project_data["Type"]
+                            new_project.name = project_data["Name"]
+                            new_project.company = project_data["Company"]
+                            new_project.ownership = project_data["Ownership"]
+                            new_project.pli_status = project_data["PLI/Non-PLI"]
+                            new_project.state = project_data["State"]
+                            new_project.location = project_data["Location"]
                             new_project.announcement_date = announcement_date
-                            
-                            # Category and types
-                            new_project.category = project_data.get("Category", project_data.get("category", "Generation"))
-                            new_project.input_type = project_data.get("Input", project_data.get("input_type", ""))
-                            new_project.output_type = project_data.get("Output", project_data.get("output_type", ""))
-                            
-                            # Capacity information
-                            new_project.generation_capacity = project_data.get("Capacity", project_data.get("generation_capacity", 0))
-                            new_project.cell_capacity = project_data.get("Cell Capacity", project_data.get("cell_capacity", 0))
-                            new_project.module_capacity = project_data.get("Module Capacity", project_data.get("module_capacity", 0))
-                            new_project.integration_capacity = project_data.get("Integration Capacity", project_data.get("integration_capacity", 0))
-                            
-                            # Project status information
-                            new_project.status = project_data.get("Status", project_data.get("status", "Announced"))
-                            new_project.land_acquisition = project_data.get("Land Acquisition", project_data.get("land_acquisition", "Unknown"))
-                            new_project.power_approval = project_data.get("Power Approval", project_data.get("power_approval", "Unknown"))
-                            new_project.environment_clearance = project_data.get("Environment Clearance", project_data.get("environment_clearance", "Unknown"))
-                            new_project.almm_listing = project_data.get("ALMM Listing", project_data.get("almm_listing", "Unknown"))
-                            
-                            # Investment information
-                            new_project.investment_usd = project_data.get("Investment USD", project_data.get("investment_usd", 0))
-                            new_project.investment_inr = project_data.get("Investment INR", project_data.get("investment_inr", 0))
-                            
-                            # Completion information
-                            new_project.expected_completion = project_data.get("Expected Completion", project_data.get("expected_completion", "Unknown"))
+                            new_project.category = project_data["Category"]
+                            new_project.input_type = project_data["Input"]
+                            new_project.output_type = project_data["Output"]
+                            new_project.cell_capacity = project_data.get("Cell Capacity", 0)
+                            new_project.module_capacity = project_data.get("Module Capacity", 0)
+                            new_project.integration_capacity = project_data.get("Integration Capacity", 0)
+                            new_project.status = project_data["Status"]
+                            new_project.land_acquisition = project_data["Land Acquisition"]
+                            new_project.power_approval = project_data["Power Approval"]
+                            new_project.environment_clearance = project_data["Environment Clearance"]
+                            new_project.almm_listing = project_data["ALMM Listing"]
+                            new_project.investment_usd = project_data.get("Investment USD", 0)
+                            new_project.investment_inr = project_data.get("Investment INR", 0)
+                            new_project.expected_completion = project_data["Expected Completion"]
                             new_project.last_updated = datetime.datetime.now().date()
                             new_project.source = article_url
                             
