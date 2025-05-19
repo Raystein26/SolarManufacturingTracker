@@ -1,6 +1,7 @@
 """
-Enhanced scraper with training-based category detection for renewable energy projects.
-This module integrates the training module for better detection of diverse energy types.
+Enhanced scraper with training-based category detection and NLP-based entity recognition 
+for renewable energy projects. This module integrates spaCy for advanced entity extraction
+and the training module for better detection of diverse energy types.
 """
 
 import os
@@ -15,8 +16,9 @@ import requests
 from collections import defaultdict
 import nltk
 
-# Import the training module
+# Import the training module and NLP processor
 from training_module import ProjectTypeTrainer
+from nlp_processor import analyze_project_text
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -362,7 +364,7 @@ def determine_project_type(text):
 
 def extract_project_data(article_url, content=None):
     """
-    Extract project data from an article
+    Extract project data from an article using NLP-based entity recognition
     
     Args:
         article_url: URL of the article
@@ -431,15 +433,32 @@ def extract_project_data(article_url, content=None):
         logger.info(f"Article rejected: Not about a pipeline project (score: {pipeline_score})")
         return None
     
-    # Extract project details based on identified type
+    # Use NLP-based entity recognition to extract detailed information
+    nlp_results = analyze_project_text(content, title)
+    logger.info(f"NLP entity extraction complete for {article_url}")
+    
+    # Extract project details based on identified type and NLP results
     project_data = {
         'type': project_type.capitalize(),
-        'name': extract_project_name(content, title),
-        'company': extract_company(content),
-        'location': extract_location(content),
+        'name': nlp_results.get('project_name') or extract_project_name(content, title),
+        'company': nlp_results.get('companies')[0] if nlp_results.get('companies') else extract_company(content),
+        'location': nlp_results.get('location')[0] if nlp_results.get('location') else extract_location(content),
+        'state': nlp_results.get('state'),
         'source': article_url,
         'announcement_date': datetime.now().strftime('%Y-%m-%d')
     }
+    
+    # Extract investment data if available from NLP
+    if nlp_results.get('investment'):
+        investment = nlp_results['investment']
+        if investment['currency'] == 'USD':
+            project_data['investment_usd'] = investment['value']
+        else:  # INR
+            project_data['investment_inr'] = investment['value']
+    
+    # Extract completion date if available
+    if nlp_results.get('completion_date'):
+        project_data['expected_completion'] = nlp_results['completion_date']
     
     # Extract capacity based on project type
     if project_type == 'solar':
