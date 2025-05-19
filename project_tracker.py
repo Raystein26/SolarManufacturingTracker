@@ -201,9 +201,15 @@ def check_source(source):
                 if project_data:
                     # Check if project already exists with similar name and company
                     try:
+                        # Handle both traditional and new enhanced format keys
+                        project_name = project_data.get('Name', project_data.get('name', ''))
+                        project_company = project_data.get('Company', project_data.get('company', ''))
+                        
+                        logger.info(f"Checking for existing project: {project_name} by {project_company}")
+                        
                         existing_projects = Project.query.filter(
-                            Project.name.ilike(f"%{project_data['Name']}%"),
-                            Project.company.ilike(f"%{project_data['Company']}%")
+                            Project.name.ilike(f"%{project_name}%"),
+                            Project.company.ilike(f"%{project_company}%")
                         ).all()
                     except Exception as e:
                         logger.error(f"Error querying existing projects: {str(e)}")
