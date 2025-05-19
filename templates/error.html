@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Error - India Renewable Energy Tracker{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4><i class="fas fa-exclamation-triangle me-2"></i>Error</h4>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="card-title">Something went wrong</h5>
+                    <p class="card-text">{{ error }}</p>
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-primary me-2">
+                            <i class="fas fa-home me-1"></i> Go to Homepage
+                        </a>
+                        <button onclick="window.location.reload();" class="btn btn-outline-secondary">
+                            <i class="fas fa-sync-alt me-1"></i> Try Again
+                        </button>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>If this issue persists, please check the server logs or contact support.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

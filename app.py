@@ -31,6 +31,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
+    "pool_timeout": 30,  # Timeout for getting a connection from the pool
+    "max_overflow": 10,  # Maximum number of connections to overflow from the pool
+    "pool_size": 5       # The size of the connection pool
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -82,3 +85,11 @@ def before_request():
     if not getattr(app, 'scheduler_started', False):
         initialize_scheduler()
         app.scheduler_started = True
+
+# Add global error handlers for database connection issues
+@app.errorhandler(500)
+def handle_server_error(e):
+    logger.error(f"500 error: {str(e)}")
+    if "database" in str(e).lower() or "sql" in str(e).lower() or "connection" in str(e).lower():
+        return render_template('error.html', error="Database connection error. Please try again later."), 500
+    return render_template('error.html', error="An unexpected error occurred. Please try again later."), 500
