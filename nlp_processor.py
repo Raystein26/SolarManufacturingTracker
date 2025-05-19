@@ -66,20 +66,32 @@ def extract_entities(text: str) -> Dict[str, Union[str, float, List[dict]]]:
         return {}
     
     # Process text with spaCy
-    doc = nlp(text)
-    
-    # Initialize results dictionary
-    results = {
-        'companies': extract_companies(doc, text),
-        'locations': extract_locations(doc, text),
-        'dates': extract_dates(doc, text),
-        'capacities': extract_capacities(text),
-        'investment': extract_investment(text),
-        'completion_date': extract_completion_date(text),
-        'state': extract_indian_state(text)
-    }
-    
-    return results
+    try:
+        doc = nlp(text)
+        
+        # Initialize results dictionary
+        results = {
+            'companies': extract_companies(doc, text),
+            'locations': extract_locations(doc, text),
+            'dates': extract_dates(doc, text),
+            'capacities': extract_capacities(text),
+            'investment': extract_investment(text),
+            'completion_date': extract_completion_date(text),
+            'state': extract_indian_state(text)
+        }
+        
+        return results
+    except Exception as e:
+        logger.error(f"Error in spaCy entity extraction: {e}")
+        return {
+            'companies': [],
+            'locations': [],
+            'dates': [],
+            'capacities': [],
+            'investment': None,
+            'completion_date': None,
+            'state': None
+        }
 
 def extract_companies(doc, text: str) -> List[dict]:
     """Extract company names with confidence scores"""
@@ -319,7 +331,7 @@ def extract_indian_state(text: str) -> Optional[Dict[str, Union[str, float]]]:
     
     return None
 
-def analyze_project_text(text: str, title: str = "") -> Dict:
+def analyze_project_text(text: str, title: str = None) -> Dict:
     """
     Analyze project text to extract all relevant entities
     
@@ -330,6 +342,9 @@ def analyze_project_text(text: str, title: str = "") -> Dict:
     Returns:
         Dictionary with all extracted information
     """
+    if title is None:
+        title = ""
+        
     full_text = f"{title}\n\n{text}" if title else text
     
     try:
@@ -341,7 +356,7 @@ def analyze_project_text(text: str, title: str = "") -> Dict:
             "companies": [c['name'] for c in entities.get('companies', [])[:1]] if entities.get('companies') else [],
             "location": [l['name'] for l in entities.get('locations', [])[:1]] if entities.get('locations') else [],
             "state": entities.get('state', {}).get('name') if entities.get('state') else None,
-            "announcement_date": format_date(entities.get('dates', [])[:1]),
+            "announcement_date": format_date(entities.get('dates', [])[:1] if entities.get('dates') else []),
             "capacities": entities.get('capacities', []),
             "investment": entities.get('investment'),
             "completion_date": entities.get('completion_date', {}).get('date_text') if entities.get('completion_date') else None,
@@ -370,40 +385,50 @@ def extract_project_name(text: str, entities: Dict) -> Optional[str]:
                 return project_name
     
     # If no clear project name, try to construct one from entities
-    if entities.get('companies') and (
-        entities.get('capacities') or 
-        entities.get('locations') or 
-        ('Battery' in text or 'Solar' in text or 'Wind' in text)
-    ):
-        company = entities['companies'][0]['name']
-        
-        # Determine project type
-        project_type = ""
-        if 'Solar' in text or 'solar' in text:
-            project_type = "Solar"
-        elif 'Battery' in text or 'battery' in text:
-            project_type = "Battery"
-        elif 'Wind' in text or 'wind' in text:
-            project_type = "Wind"
-        elif 'Hydro' in text or 'hydro' in text:
-            project_type = "Hydro"
-        elif 'Hydrogen' in text or 'hydrogen' in text:
-            project_type = "Hydrogen"
-        
-        # Get capacity if available
-        capacity_str = ""
-        if entities.get('capacities'):
-            cap = entities['capacities'][0]
-            capacity_str = f"{cap['value']} {cap['unit']} "
-        
-        # Get location if available
-        location_str = ""
-        if entities.get('locations'):
-            location_str = f" in {entities['locations'][0]['name']}"
-        elif entities.get('state'):
-            location_str = f" in {entities['state']['name']}"
-        
-        return f"{company} {capacity_str}{project_type} Project{location_str}".strip()
+    try:
+        if entities and entities.get('companies') and len(entities.get('companies', [])) > 0 and (
+            (entities.get('capacities') and len(entities.get('capacities', [])) > 0) or 
+            (entities.get('locations') and len(entities.get('locations', [])) > 0) or 
+            ('Battery' in text or 'Solar' in text or 'Wind' in text)
+        ):
+            company = entities['companies'][0].get('name', 'Unknown Company')
+            
+            # Determine project type
+            project_type = ""
+            if 'Solar' in text or 'solar' in text:
+                project_type = "Solar"
+            elif 'Battery' in text or 'battery' in text:
+                project_type = "Battery"
+            elif 'Wind' in text or 'wind' in text:
+                project_type = "Wind"
+            elif 'Hydro' in text or 'hydro' in text:
+                project_type = "Hydro"
+            elif 'Hydrogen' in text or 'hydrogen' in text:
+                project_type = "Hydrogen"
+            
+            # Get capacity if available
+            capacity_str = ""
+            if entities.get('capacities') and len(entities.get('capacities', [])) > 0:
+                cap = entities['capacities'][0]
+                capacity_str = f"{cap.get('value', '')} {cap.get('unit', '')} "
+            
+            # Get location if available
+            location_str = ""
+            if entities.get('locations') and len(entities.get('locations', [])) > 0:
+                location_str = f" in {entities['locations'][0].get('name', '')}"
+            elif entities.get('state') and entities['state'].get('name'):
+                location_str = f" in {entities['state'].get('name', '')}"
+            
+            return f"{company} {capacity_str}{project_type} Project{location_str}".strip()
+    except Exception as e:
+        logger.error(f"Error constructing project name: {e}")
+    
+    # Fallback to simple extraction from text
+    upper_matches = re.findall(r'([A-Z][A-Za-z0-9\s\-]{10,50})', text)
+    if upper_matches:
+        for match in upper_matches:
+            if any(term in match.lower() for term in ['project', 'plant', 'facility', 'solar', 'battery', 'wind', 'energy']):
+                return match.strip()
     
     return None
 

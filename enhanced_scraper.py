@@ -434,31 +434,63 @@ def extract_project_data(article_url, content=None):
         return None
     
     # Use NLP-based entity recognition to extract detailed information
-    nlp_results = analyze_project_text(content, title)
-    logger.info(f"NLP entity extraction complete for {article_url}")
+    try:
+        nlp_results = analyze_project_text(content, title)
+        logger.info(f"NLP entity extraction complete for {article_url}")
+    except Exception as e:
+        logger.error(f"Error in NLP processing: {e}")
+        nlp_results = {}
     
     # Extract project details based on identified type and NLP results
     project_data = {
-        'type': project_type.capitalize(),
-        'name': nlp_results.get('project_name') or extract_project_name(content, title),
-        'company': nlp_results.get('companies')[0] if nlp_results.get('companies') else extract_company(content),
-        'location': nlp_results.get('location')[0] if nlp_results.get('location') else extract_location(content),
-        'state': nlp_results.get('state'),
+        'type': project_type.capitalize() if project_type else 'Unknown',
+        'name': (nlp_results.get('project_name') if nlp_results else None) or extract_project_name(content, title),
+        'company': nlp_results.get('companies')[0] if nlp_results and nlp_results.get('companies') else extract_company(content),
+        'location': nlp_results.get('location')[0] if nlp_results and nlp_results.get('location') else extract_location(content),
+        'state': nlp_results.get('state') if nlp_results else None,
         'source': article_url,
         'announcement_date': datetime.now().strftime('%Y-%m-%d')
     }
     
     # Extract investment data if available from NLP
-    if nlp_results.get('investment'):
-        investment = nlp_results['investment']
-        if investment['currency'] == 'USD':
-            project_data['investment_usd'] = investment['value']
-        else:  # INR
-            project_data['investment_inr'] = investment['value']
+    if nlp_results and nlp_results.get('investment'):
+        try:
+            investment = nlp_results['investment']
+            if investment.get('currency') == 'USD':
+                project_data['investment_usd'] = investment.get('value', 0)
+            else:  # INR
+                project_data['investment_inr'] = investment.get('value', 0)
+        except Exception as e:
+            logger.error(f"Error processing investment data: {e}")
     
     # Extract completion date if available
-    if nlp_results.get('completion_date'):
-        project_data['expected_completion'] = nlp_results['completion_date']
+    if nlp_results and nlp_results.get('completion_date'):
+        try:
+            project_data['expected_completion'] = nlp_results['completion_date']
+        except Exception as e:
+            logger.error(f"Error processing completion date: {e}")
+            
+    # Extract capacity information from NLP results if available
+    if nlp_results and nlp_results.get('capacities') and len(nlp_results['capacities']) > 0:
+        try:
+            for capacity in nlp_results['capacities']:
+                unit = capacity.get('unit', '').upper() if capacity.get('unit') else ''
+                value = capacity.get('value', 0)
+                
+                # Determine which capacity field to update based on unit
+                if 'GW' in unit or 'MW' in unit or 'KW' in unit:
+                    if 'H' not in unit:  # Power capacity (not energy storage)
+                        project_data['generation_capacity'] = value if 'GW' in unit else value/1000 if 'MW' in unit else value/1000000
+                    else:  # Energy storage
+                        project_data['storage_capacity'] = value if 'GWH' in unit else value/1000 if 'MWH' in unit else value/1000000
+                
+                # Special cases for different project types
+                if project_type == 'hydrogen' and ('TON' in unit or 'TONNE' in unit):
+                    project_data['hydrogen_production'] = value
+                elif project_type == 'biofuel' and ('LITER' in unit or 'LITRE' in unit):
+                    project_data['biofuel_capacity'] = value
+        except Exception as e:
+            logger.error(f"Error processing capacity data: {e}")
     
     # Extract capacity based on project type
     if project_type == 'solar':
