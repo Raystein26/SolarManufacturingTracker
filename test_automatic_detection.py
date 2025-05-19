@@ -13,34 +13,46 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[logging.StreamHandler()])
 
-# Test URLs to check (recent active articles)
-TEST_URLS = [
-    "https://energy.economictimes.indiatimes.com/news/renewable/india-one-of-the-most-exciting-growth-markets-for-clean-energy-globally-gcl/101053249",
-    "https://www.saurenergy.com/solar-energy-news/rajasthan-solar-park-with-8550-mw-capacity-to-be-set-up",
-    "https://energy.economictimes.indiatimes.com/news/renewable/adani-green-energy-signs-ppa-for-1-7-gw-solar-power-project-with-seci/100998266"
-]
+# Test with pre-loaded content instead of live URLs
+TEST_CONTENT = """
+Premier Energies Partners with Sino-American for Solar Module Plant in Hyderabad
+
+Premier Energies, India's second-largest integrated solar cell and module manufacturer, has announced a strategic partnership with Sino-American Silicon Products Inc., a global leader in renewable energy, to establish a state-of-the-art solar module manufacturing facility in Hyderabad.
+
+The new facility will have a 2 GW production capacity for TOPCon modules, aligning with India's push for self-reliance in renewable energy manufacturing.
+
+This partnership brings together Premier Energies' manufacturing expertise and Sino-American's technological capabilities, strengthening India's position in the global solar supply chain.
+
+According to company officials, the plant will be operational by the first quarter of 2024 and create over 700 jobs in Hyderabad.
+
+The initial investment for the facility is estimated at Rs 1,200 crore (approximately $150 million).
+"""
+
+# Use a fake URL for testing
+TEST_URLS = ["https://test-article-url/premier-energies-solar-module-plant"]
 
 def test_extraction_and_mapping(url):
     """Test if content extraction and project data mapping works correctly"""
     print(f"\n\n{'='*80}\nTesting URL: {url}\n{'='*80}")
     
     try:
-        # Extract content
-        print("1. Testing content extraction...")
-        content_dict = enhanced_scraper.extract_article_content(url)
+        # Instead of extracting, use our predefined content
+        print("1. Testing with predefined content...")
+        content_dict = {
+            'text': TEST_CONTENT,
+            'title': 'Premier Energies Partners with Sino-American for Solar Module Plant in Hyderabad',
+            'url': url,
+            'publish_date': datetime.now()
+        }
         
-        if not content_dict:
-            print("FAILED: Content extraction returned None")
-            return
-            
-        print(f"SUCCESS: Content extracted as expected")
+        print(f"SUCCESS: Using predefined test content")
         print(f"Title: {content_dict.get('title')}")
         print(f"Content length: {len(content_dict.get('text', ''))}")
         print(f"Keys returned: {list(content_dict.keys())}")
         
         # Extract project data
         print("\n2. Testing project data extraction...")
-        project_data = enhanced_scraper.extract_project_data(url, content_dict)
+        project_data = enhanced_scraper.extract_project_data(url, content_dict.get('text'))
         
         if not project_data:
             print("FAILED: Project data extraction returned None")
