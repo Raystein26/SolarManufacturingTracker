@@ -1,0 +1,126 @@
+{
+  "keywords": {
+    "solar": [
+      "gujarat",
+      "manufacturing",
+      "park",
+      "solar",
+      "500mw",
+      "adani green",
+      "ntpc",
+      "generation",
+      "project",
+      "adani",
+      "module"
+    ],
+    "wind": [
+      "tamil",
+      "renew power",
+      "nadu",
+      "power",
+      "suzlon",
+      "farm",
+      "wind",
+      "generation",
+      "project",
+      "renew",
+      "250mw",
+      "offshore"
+    ],
+    "battery": [
+      "tata",
+      "facility",
+      "manufacturing",
+      "exide",
+      "mumbai",
+      "battery",
+      "cell",
+      "tata power",
+      "project",
+      "storage"
+    ],
+    "hydro": [
+      "jsw energy",
+      "pumped",
+      "karnataka",
+      "small",
+      "nhpc",
+      "generation",
+      "storage",
+      "project",
+      "hydro",
+      "himachal"
+    ],
+    "hydrogen": [
+      "gujarat",
+      "manufacturing",
+      "reliance",
+      "production",
+      "electrolyzer",
+      "plant",
+      "hydrogen",
+      "ntpc",
+      "project",
+      "green"
+    ],
+    "biofuel": [
+      "facility",
+      "biofuel",
+      "ethanol",
+      "production",
+      "maharashtra",
+      "praj industries",
+      "praj",
+      "oil",
+      "project",
+      "indian",
+      "indian oil"
+    ]
+  },
+  "phrases": {
+    "solar": [
+      "module manufacturing",
+      "solar park",
+      "adani solar",
+      "ntpc 500mw"
+    ],
+    "wind": [
+      "wind farm",
+      "renew power",
+      "suzlon 250mw",
+      "offshore wind",
+      "tamil nadu"
+    ],
+    "battery": [
+      "tata battery",
+      "storage project",
+      "manufacturing facility",
+      "exide cell"
+    ],
+    "hydro": [
+      "pumped storage",
+      "nhpc small",
+      "hydro project"
+    ],
+    "hydrogen": [
+      "hydrogen project",
+      "ntpc electrolyzer",
+      "reliance green"
+    ],
+    "biofuel": [
+      "ethanol production",
+      "indian oil",
+      "project maharashtra",
+      "praj biofuel"
+    ]
+  },
+  "patterns": {},
+  "metrics": {
+    "solar": {},
+    "wind": {},
+    "battery": {},
+    "hydro": {},
+    "hydrogen": {},
+    "biofuel": {}
+  }
+}
