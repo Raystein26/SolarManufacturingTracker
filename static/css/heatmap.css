@@ -1,0 +1,105 @@
+/* Heatmap Styles */
+.india-map-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.india-map-container svg {
+  width: 100%;
+  height: 100%;
+}
+
+.india-map-placeholder {
+  width: 100%;
+  height: 400px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.heatmap-legend {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.heatmap-legend-gradient {
+  height: 10px;
+  background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
+  border-radius: 5px;
+  margin: 5px 0;
+}
+
+.heatmap-bars {
+  margin-top: 20px;
+}
+
+.heatmap-bar-item {
+  margin-bottom: 10px;
+}
+
+/* State Hover Effect */
+.india-map-container path:hover,
+.india-map-container g:hover {
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+/* Project Type Legend */
+.project-type-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.project-type-item {
+  display: flex;
+  align-items: center;
+  margin: 0 10px 5px 0;
+}
+
+.project-type-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+/* Multi-dimensional Heatmap */
+.multi-dim-controls {
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: center;
+}
+
+.multi-dim-controls button {
+  margin: 0 5px;
+}
+
+/* Tooltip styles */
+.map-tooltip {
+  position: absolute;
+  background-color: rgba(0,0,0,0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .india-map-container {
+    height: 300px;
+  }
+  
+  .india-map-placeholder {
+    height: 300px;
+  }
+}
