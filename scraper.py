@@ -465,18 +465,20 @@ def determine_project_type(text):
         logger.info("Article lacks specific capacity or investment details")
         return None
     
-    # Define project categories and their keywords
+    # Define project categories and their keywords (improved for better Solar detection)
     project_types = {
         "Solar": {
-            "general": ["solar", "photovoltaic", "pv", "solar panel", "solar cell", "solar module"],
+            "general": ["solar", "photovoltaic", "pv", "panel", "module", "renewable", "green energy"],
             "manufacturing": [
                 "solar cell manufacturing", "solar module production", "pv manufacturing facility",
                 "solar panel factory", "module manufacturing", "solar gigafactory", 
-                "solar manufacturing capacity", "wafer production", "cell production line"
+                "solar manufacturing capacity", "wafer production", "cell production line",
+                "module production", "cell production", "manufacturing facility", "gw capacity"
             ],
             "generation": [
                 "solar plant", "solar power plant", "solar farm", "solar park", "solar generation",
-                "utility-scale solar", "grid-connected solar", "solar power project"
+                "utility-scale solar", "grid-connected solar", "solar power project",
+                "power project", "energy project", "renewable project", "pv project"
             ]
         },
         
@@ -587,6 +589,7 @@ def determine_project_type(text):
     # Make sure we're prioritizing renewable categories if scores are close
     # This helps ensure new categories get detected more easily
     renewable_priorities = {
+        "Solar": 1.0,      # Add boost to Solar detection to balance with Battery
         "Wind": 0.5,       # Add boost to Wind detection
         "Hydro": 0.5,      # Add boost to Hydro detection
         "GreenHydrogen": 1, # Add larger boost to Green Hydrogen
