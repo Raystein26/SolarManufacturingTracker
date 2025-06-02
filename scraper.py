@@ -465,20 +465,18 @@ def determine_project_type(text):
         logger.info("Article lacks specific capacity or investment details")
         return None
     
-    # Define project categories and their keywords (improved for better Solar detection)
+    # Define project categories and their keywords
     project_types = {
         "Solar": {
-            "general": ["solar", "photovoltaic", "pv", "panel", "module", "renewable", "green energy"],
+            "general": ["solar", "photovoltaic", "pv", "solar panel", "solar cell", "solar module"],
             "manufacturing": [
                 "solar cell manufacturing", "solar module production", "pv manufacturing facility",
                 "solar panel factory", "module manufacturing", "solar gigafactory", 
-                "solar manufacturing capacity", "wafer production", "cell production line",
-                "module production", "cell production", "manufacturing facility", "gw capacity"
+                "solar manufacturing capacity", "wafer production", "cell production line"
             ],
             "generation": [
                 "solar plant", "solar power plant", "solar farm", "solar park", "solar generation",
-                "utility-scale solar", "grid-connected solar", "solar power project",
-                "power project", "energy project", "renewable project", "pv project"
+                "utility-scale solar", "grid-connected solar", "solar power project"
             ]
         },
         
@@ -565,11 +563,6 @@ def determine_project_type(text):
         
         type_scores[energy_type] = score
     
-    # Special handling for Solar projects with significant indicators
-    if diagnostic_scores.get('Solar', 0) >= 4:
-        logger.info("Special solar detection: Multiple strong solar indicators found")
-        return "Solar"  # Return Solar directly if we have strong indicators
-    
     # Find the highest scoring type
     highest_score = 0
     project_type = None
@@ -580,11 +573,6 @@ def determine_project_type(text):
     
     # THIRD CHECK: Scores must exceed minimum threshold
     MIN_SCORE_THRESHOLD = 2  # Lower threshold to be more lenient with detection
-    
-    # More lenient threshold for Solar projects to balance with Battery
-    if project_type == "Solar" and highest_score >= MIN_SCORE_THRESHOLD - 0.5:
-        logger.info(f"Solar project detected with slightly reduced threshold: {highest_score}")
-        return project_type
     
     if highest_score < MIN_SCORE_THRESHOLD:
         # Log top matches even if below threshold for diagnostic purposes
@@ -599,7 +587,6 @@ def determine_project_type(text):
     # Make sure we're prioritizing renewable categories if scores are close
     # This helps ensure new categories get detected more easily
     renewable_priorities = {
-        "Solar": 1.0,      # Add boost to Solar detection to balance with Battery
         "Wind": 0.5,       # Add boost to Wind detection
         "Hydro": 0.5,      # Add boost to Hydro detection
         "GreenHydrogen": 1, # Add larger boost to Green Hydrogen
@@ -701,16 +688,8 @@ def extract_project_data(article_url, content=None):
         
         # Get scores for all potential project types
         text_lower = content['text'].lower()
-        
-        # Expanded keywords for better Solar detection
         type_keywords = {
-            'Solar': [
-                'solar', 'photovoltaic', 'pv', 'solar cell', 'solar panel', 'module', 'wafer', 
-                'renewable energy', 'green energy', 'clean energy', 'sustainable energy', 
-                'panels', 'modules', 'cells', 'gw capacity', 'mw capacity', 'panel manufacturing',
-                'module production', 'cell production', 'ingot', 'polysilicon', 'power generation',
-                'power project', 'electricity generation', 'rooftop solar'
-            ],
+            'Solar': ['solar', 'photovoltaic', 'pv', 'solar cell', 'solar panel', 'module', 'wafer'],
             'Battery': ['battery', 'energy storage', 'storage system', 'lithium', 'cell', 'accumulator', 'bess'],
             'Wind': ['wind', 'turbine', 'wind farm', 'wind park', 'wind energy', 'onshore', 'offshore'],
             'Hydro': ['hydro', 'hydropower', 'hydroelectric', 'dam', 'pumped storage', 'water power'],
@@ -718,22 +697,6 @@ def extract_project_data(article_url, content=None):
             'Biogas': ['biogas', 'biomethane', 'bioenergy', 'organic waste', 'anaerobic', 'digestate'],
             'Ethanol': ['ethanol', 'biofuel', 'distillery', 'ethanol plant', 'e20', 'flex fuel', 'bioethanol']
         }
-        
-        # Extra checks for Solar projects by looking for key patterns
-        solar_indicators = [
-            re.search(r'(?:solar|pv|photovoltaic).*?(?:GW|gigawatt|MW|megawatt)', text_lower) is not None,
-            re.search(r'(?:module|cell|panel|wafer).*?(?:manufacturing|production|factory)', text_lower) is not None,
-            re.search(r'(?:renewable|green|clean).*?(?:energy|electricity|power)', text_lower) is not None,
-            'solar' in text_lower and any(x in text_lower for x in ['project', 'capacity', 'investment', 'plant']),
-            'photovoltaic' in text_lower or 'pv' in text_lower and len(text_lower) > 1000,
-            re.search(r'gw|mw|megawatt|gigawatt', text_lower) is not None and ('power' in text_lower or 'capacity' in text_lower)
-        ]
-        
-        # Apply initial boost if multiple solar indicators are found
-        solar_score_boost = sum(1 for x in solar_indicators if x)
-        if solar_score_boost >= 2:
-            diagnostic_scores['Solar'] = solar_score_boost * 2  # Significant initial boost
-        
         
         # Calculate preliminary scores for diagnostic purposes
         for energy_type, keywords in type_keywords.items():
