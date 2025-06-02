@@ -387,13 +387,22 @@ def is_india_project(text):
         logger.info(f"Foreign country mentioned without strong India indicators - rejecting")
         return False
     
-    # Require explicit India mention for acceptance
-    if not india_explicitly_mentioned and score < 0.8:
-        logger.info(f"No explicit India mention and low confidence score: {score:.2f}")
-        return False
+    # More lenient acceptance criteria
+    if india_explicitly_mentioned:
+        logger.info(f"India explicitly mentioned - accepting with score: {score:.2f}")
+        return True
     
-    logger.info(f"India project confidence score: {score:.2f}")
-    return score > 0.6  # Raised threshold for considering it an Indian project
+    if strong_indicator_found:
+        logger.info(f"Strong India indicator found - accepting with score: {score:.2f}")
+        return True
+    
+    # Accept if we have good location/entity matches even without explicit India mention
+    if location_count >= 2 or (location_count >= 1 and entity_count >= 1):
+        logger.info(f"Good India location/entity matches - accepting with score: {score:.2f}")
+        return True
+    
+    logger.info(f"India project confidence score too low: {score:.2f}")
+    return score > 0.5  # Lowered threshold back to more reasonable level
 
 def is_pipeline_project(text):
     """Check if the project is in pipeline (announced or under construction)"""
