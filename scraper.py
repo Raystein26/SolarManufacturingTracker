@@ -1,1079 +1,1000 @@
-import re
-import time
+"""
+Enhanced scraper with training-based category detection for renewable energy projects.
+This module integrates the training module for better detection of diverse energy types.
+"""
+
+import os
 import logging
-import trafilatura
-import requests
-import newspaper
-import nltk
-import datetime
-import urllib.parse
-from urllib.parse import urlparse
+import re
 from datetime import datetime
+import newspaper
+from newspaper import Article
+import trafilatura
 from bs4 import BeautifulSoup
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import requests
+from collections import defaultdict
+import nltk
+
+# Import the training module
+from training_module import ProjectTypeTrainer
 
 # Configure logging
-logging.basicConfig(level=logging.INFO,
-                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('scraper')
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Set a global diagnostic mode flag, will be properly initialized when used
-# This will be updated from the app config when actually used
-DIAGNOSTIC_MODE = True
+# Initialize the trainer with all available Excel files
+trainer = ProjectTypeTrainer()
+training_results = None
 
-# Initialize diagnostic tracker
-try:
-    from diagnostic_tracker import diagnostic_tracker
-    logger.info("Diagnostic tracker imported successfully")
-except ImportError:
-    logger.warning("Diagnostic tracker module not available")
-
-# Initialize NLTK resources if needed
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
+def load_training_data():
+    """Load training data from Excel files"""
+    global training_results
+    # Lazy load training data when first needed
+    if training_results is None:
+        logger.info("Loading training data from Excel files...")
+        # Find all Excel files with renewable projects data
+        excel_files = [f for f in os.listdir() if f.endswith('.xlsx') and 'renewable' in f]
+        if not excel_files:
+            logger.warning("No training Excel files found")
+            return {}
+            
+        # Process the latest file (assuming filename contains date)
+        latest_file = sorted(excel_files)[-1]
+        logger.info(f"Using {latest_file} for training")
+        
+        # Process the file and get training results
+        trainer.process_excel_file(latest_file)
+        training_results = trainer.get_training_results()
+        logger.info(f"Loaded training data for {len(training_results)} project types")
     
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
+    return training_results
 
 def fetch_news_from_source(source_url):
-    """Fetch news articles from a source website with enhanced search"""
+    """
+    Fetch news articles from a source website with enhanced search
+    Returns a list of article URLs
+    """
     try:
         logger.info(f"Fetching news from {source_url}")
         
-        # Initialize list to store article URLs
+        # Create a newspaper Source object
+        source = newspaper.build(source_url, memoize_articles=False)
+        
+        # Extract article URLs
         article_urls = []
-        
-        # Attempt to fetch and parse the page
-        response = requests.get(source_url, timeout=30)
-        response.raise_for_status()
-        
-        # Parse with BeautifulSoup for more flexible extraction
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Method 1: Find all anchor tags with href attributes
-        for a_tag in soup.find_all('a', href=True):
-            url = a_tag['href']
+        for article in source.articles:
+            # Process the URL to ensure it's properly formatted
+            url = article.url
             
-            # Skip if not a valid URL or is a social media link
-            if not url or url.startswith('#') or url.startswith('javascript:'):
+            # Skip URLs that don't look like news articles
+            if any(skip in url.lower() for skip in ['login', 'signin', 'subscribe', 'advertise']):
                 continue
                 
-            # Skip common non-article links
-            if url.startswith('mailto:') or url.startswith('tel:') or \
-               url.startswith('/cdn-cgi/') or 'facebook.com' in url or \
-               'twitter.com' in url or 'instagram.com' in url:
+            # Skip PDF and other file downloads
+            if any(ext in url.lower() for ext in ['.pdf', '.csv', '.xlsx', '.zip']):
                 continue
-                
-            # Convert relative URLs to absolute
-            if not url.startswith('http'):
-                base_url = urlparse(source_url)
-                if url.startswith('/'):
-                    url = f"{base_url.scheme}://{base_url.netloc}{url}"
-                else:
-                    url = f"{source_url.rstrip('/')}/{url.lstrip('/')}"
             
-            # Filter for article-like URLs
-            if 'article' in url.lower() or 'news' in url.lower() or \
-               'press-release' in url.lower() or 'story' in url.lower() or \
-               'blog' in url.lower() or 'post' in url.lower():
-                article_urls.append(url)
+            article_urls.append(url)
         
-        # Method 2: Use newspaper library for additional extraction
-        try:
-            news_site = newspaper.build(source_url, memoize_articles=False, fetch_images=False)
-            for article in news_site.articles:
-                # Parse the URL to check domain
-                article_domain = urlparse(article.url).netloc
-                source_domain = urlparse(source_url).netloc
-                
-                # Only include articles from the same domain or subdomain
-                if article_domain == source_domain or article_domain.endswith('.' + source_domain):
-                    article_urls.append(article.url)
-        except Exception as e:
-            logger.warning(f"Newspaper extraction had issues: {str(e)}")
-        
-        # Additional method for more specialized websites using regex patterns
-        try:
-            # Look for common article URL patterns in the HTML
-            article_patterns = [
-                r'href=[\'"]([^\'"]*(?:article|story|news|report|update)[^\'"]*)[\'"]',
-                r'href=[\'"]([^\'"]*\d{4}[/\-]\d{2}[/\-]\d{2}[^\'"]*)[\'"]',  # Date-based URLs
-                r'href=[\'"]([^\'"]*(?:press-release|pressrelease)[^\'"]*)[\'"]'
-            ]
-            
-            for pattern in article_patterns:
-                matches = re.finditer(pattern, response.text)
-                for match in matches:
-                    url = match.group(1)
-                    
-                    # Convert relative URLs to absolute
-                    if not url.startswith('http'):
-                        base_url = urlparse(source_url)
-                        if url.startswith('/'):
-                            url = f"{base_url.scheme}://{base_url.netloc}{url}"
-                        else:
-                            url = f"{source_url.rstrip('/')}/{url.lstrip('/')}"
-                            
-                    article_urls.append(url)
-        except Exception as e:
-            logger.warning(f"Regex article extraction had issues: {str(e)}")
-            
-        # Remove duplicates while preserving order
-        unique_urls = []
-        for url in article_urls:
-            if url not in unique_urls:
-                unique_urls.append(url)
-        
-        logger.info(f"Found {len(unique_urls)} potential article links at {source_url}")
-        return unique_urls
+        logger.info(f"Found {len(article_urls)} potential article links at {source_url}")
+        return article_urls
         
     except Exception as e:
-        logger.error(f"Error fetching news from {source_url}: {str(e)}")
+        logger.error(f"Error fetching news from {source_url}: {e}")
         return []
 
 def extract_article_content(article_url):
-    """Extract content from an article using the best available method"""
+    """
+    Extract content from an article using the best available method
+    Returns the article content and title
+    """
+    content = None
+    title = None
+    
+    # Try newspaper first for extraction
     try:
-        # First attempt with newspaper library
-        try:
-            article = newspaper.Article(article_url)
-            article.download()
-            article.parse()
-            
-            if article.text and len(article.text) > 200:  # Basic validation
-                logger.info("Using newspaper3k for article extraction")
-                return {
-                    'title': article.title,
-                    'text': article.text,
-                    'published_date': article.publish_date,
-                    'meta': {
-                        'keywords': article.meta_keywords,
-                        'description': article.meta_description
-                    }
-                }
-        except Exception as e:
-            logger.error(f"Error extracting with newspaper: {str(e)} on URL {article_url}")
+        article = Article(article_url)
+        article.download()
+        article.parse()
         
-        # Try alternative method
-        result = extract_article_content_alternative(article_url)
-        if result:
-            return result
-            
-        # If we reach here, extraction failed
-        logger.warning(f"Failed to extract content from {article_url}")
-        return None
+        title = article.title
+        content = article.text
         
+        # Return early if we have good content
+        if content and len(content) > 200:
+            return content, title
+            
     except Exception as e:
-        logger.error(f"Error in extract_article_content for {article_url}: {str(e)}")
-        return None
+        logger.error(f"Error extracting with newspaper: {e} on URL {article_url}")
+    
+    # If newspaper fails or returns too little content, try trafilatura
+    if not content or len(content) < 200:
+        try:
+            downloaded = trafilatura.fetch_url(article_url)
+            content = trafilatura.extract(downloaded)
+            
+            # If we have content but no title, try to extract it
+            if content and not title:
+                soup = BeautifulSoup(downloaded, 'html.parser')
+                title_tag = soup.find('title')
+                if title_tag:
+                    title = title_tag.text.strip()
+                
+        except Exception as e:
+            logger.error(f"Error extracting with trafilatura: {e} on URL {article_url}")
+    
+    # If both methods fail, try alternative extraction with BeautifulSoup
+    if not content or len(content) < 200:
+        try:
+            content, title = extract_article_content_alternative(article_url)
+        except Exception as e:
+            logger.error(f"Error extracting with alternative method: {e}")
+    
+    if not content:
+        logger.warning(f"Failed to extract content from {article_url}")
+        return None, None
+        
+    return content, title
 
 def extract_article_content_alternative(article_url):
-    """Alternative method to extract article content using trafilatura and BeautifulSoup"""
-    try:
-        # First try trafilatura which is good for main text content
-        downloaded = trafilatura.fetch_url(article_url)
-        if downloaded:
-            text = trafilatura.extract(downloaded)
-            if text and len(text) > 200:  # Basic validation
-                
-                # Now extract title with BeautifulSoup for more accuracy
-                response = requests.get(article_url, timeout=15)
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                title = soup.title.text if soup.title else ""
-                
-                # Extract meta description
-                meta_desc = ""
-                meta_tag = soup.find('meta', attrs={'name': 'description'}) or \
-                           soup.find('meta', attrs={'property': 'og:description'})
-                if meta_tag and 'content' in meta_tag.attrs:
-                    meta_desc = meta_tag['content'].replace('\n', ' ').strip()
-                
-                # Extract published date
-                published_date = None
-                date_meta = soup.find('meta', attrs={'property': 'article:published_time'}) or \
-                            soup.find('meta', attrs={'name': 'pubdate'}) or \
-                            soup.find('meta', attrs={'name': 'publishdate'})
-                                
-                if date_meta and 'content' in date_meta.attrs:
-                    try:
-                        date_str = date_meta['content']
-                        published_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                    except:
-                        pass
-                        
-                return {
-                    'title': title,
-                    'text': text,
-                    'published_date': published_date,
-                    'meta': {
-                        'description': meta_desc
-                    }
-                }
-        
-        # If trafilatura fails, try BeautifulSoup with more advanced extraction
-        response = requests.get(article_url, timeout=15)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Get title
-        title = soup.title.text if soup.title else ""
-        
-        # Try to find main content
-        article_content = None
-        
-        # Method 1: Look for article or main content elements
-        for tag_name in ['article', 'main', 'div.content', 'div.article', 'div.post']:
-            if '.' in tag_name:
-                tag, cls = tag_name.split('.')
-                element = soup.find(tag, class_=cls)
-            else:
-                element = soup.find(tag_name)
-            
-            if element:
-                article_content = element
+    """
+    Alternative method to extract article content using trafilatura and BeautifulSoup
+    Returns content and title
+    """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    response = requests.get(article_url, headers=headers)
+    response.raise_for_status()
+    
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Extract title
+    title = None
+    title_tag = soup.find('title')
+    if title_tag:
+        title = title_tag.text.strip()
+    
+    # Try to find main content
+    main_content = None
+    
+    # Look for article tags
+    article_tag = soup.find('article')
+    if article_tag:
+        main_content = article_tag.get_text(separator=' ', strip=True)
+    
+    # Try common content div ids
+    if not main_content or len(main_content) < 100:
+        for content_id in ['content', 'main-content', 'article-content', 'story', 'post-content']:
+            content_div = soup.find('div', id=lambda x: x and content_id in x.lower())
+            if content_div:
+                main_content = content_div.get_text(separator=' ', strip=True)
                 break
-        
-        # Method 2: Look for content by ID patterns
-        if not article_content:
-            for id_pattern in ['content', 'article', 'post', 'main', 'story']:
-                element = soup.find(id=lambda x: x and id_pattern in x.lower())
-                if element:
-                    article_content = element
-                    break
-        
-        # Method 3: Fallback to the largest div by text content
-        if not article_content:
-            divs = soup.find_all('div')
-            if divs:
-                article_content = max(divs, key=lambda x: len(x.get_text(strip=True)))
-        
-        if article_content:
-            # Clean the content
-            for tag in article_content.find_all(['script', 'style', 'nav', 'header', 'footer']):
-                tag.decompose()
-                
-            text = article_content.get_text(separator=' ', strip=True)
-            
-            if text and len(text) > 200:  # Basic validation
-                return {
-                    'title': title,
-                    'text': text,
-                    'published_date': None,
-                    'meta': {}
-                }
-        
-        return None
-        
-    except Exception as e:
-        logger.error(f"Error extracting with alternative method: {str(e)}")
-        return None
+    
+    # If still no content, get text from all paragraphs
+    if not main_content or len(main_content) < 100:
+        paragraphs = soup.find_all('p')
+        if paragraphs:
+            main_content = ' '.join([p.get_text(strip=True) for p in paragraphs])
+    
+    return main_content, title
 
 def preprocess_text(text):
-    """Preprocess text for NLP analysis"""
+    """
+    Preprocess text for NLP analysis
+    Returns cleaned and normalized text
+    """
     if not text:
         return ""
-    
+        
     # Convert to lowercase
     text = text.lower()
-    
-    # Remove extra whitespace
-    text = re.sub(r'\s+', ' ', text)
     
     # Remove URLs
     text = re.sub(r'https?://\S+', '', text)
     
-    # Remove email addresses
-    text = re.sub(r'\S+@\S+', '', text)
+    # Remove extra whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
     
-    return text.strip()
-
-def calculate_similarity(text1, text2):
-    """Calculate semantic similarity between two texts using TF-IDF and cosine similarity"""
-    if not text1 or not text2:
-        return 0
-        
-    try:
-        vectorizer = TfidfVectorizer(stop_words='english')
-        tfidf_matrix = vectorizer.fit_transform([text1, text2])
-        
-        # Calculate cosine similarity
-        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-        return similarity
-    except Exception as e:
-        logger.error(f"Error calculating similarity: {str(e)}")
-        return 0
+    return text
 
 def is_india_project(text):
-    """Check if the article is about an Indian project using enhanced NLP techniques
-    Returns a score between 0 and 1 indicating confidence"""
+    """
+    Check if the article is about an Indian project using enhanced NLP techniques
+    Returns a score between 0 and 1 indicating confidence
+    """
     if not text:
-        return False
+        return 0.0
         
     # Preprocess text
-    processed_text = preprocess_text(text)
+    text = preprocess_text(text)
     
-    # Indian state and city names
-    indian_locations = [
-        'andhra pradesh', 'arunachal pradesh', 'assam', 'bihar', 'chhattisgarh',
-        'goa', 'gujarat', 'haryana', 'himachal pradesh', 'jharkhand', 'karnataka',
-        'kerala', 'madhya pradesh', 'maharashtra', 'manipur', 'meghalaya', 'mizoram',
-        'nagaland', 'odisha', 'punjab', 'rajasthan', 'sikkim', 'tamil nadu', 'telangana',
-        'tripura', 'uttar pradesh', 'uttarakhand', 'west bengal', 'andaman', 'nicobar',
-        'chandigarh', 'dadra', 'nagar haveli', 'daman', 'diu', 'delhi', 'jammu', 'kashmir',
-        'ladakh', 'lakshadweep', 'puducherry',
-        'mumbai', 'delhi', 'bangalore', 'bengaluru', 'hyderabad', 'ahmedabad', 'chennai',
-        'kolkata', 'surat', 'pune', 'jaipur', 'lucknow', 'kanpur', 'nagpur', 'visakhapatnam',
-        'bhopal', 'patna', 'indore', 'thane', 'agra', 'coimbatore', 'vadodara', 'ghaziabad',
-        'ludhiana', 'nashik'
+    # Key markers for Indian projects
+    india_markers = [
+        'india', 'indian', 'bharat', 'new delhi', 'mumbai', 'bangalore', 
+        'gujarat', 'rajasthan', 'tamil nadu', 'karnataka', 'andhra pradesh',
+        'telangana', 'maharashtra', 'madhya pradesh', 'uttar pradesh',
+        'pli scheme', 'mnre', 'seci', 'ntpc', 'ireda', 'eesl', 'ministry of power',
+        'ministry of new and renewable energy', 'pm modi', 'prime minister modi'
     ]
     
-    # Indian companies and organizations
-    indian_entities = [
-        'tata', 'reliance', 'adani', 'mahindra', 'bajaj', 'birla', 'infosys', 'wipro',
-        'bhel', 'ntpc', 'ongc', 'ioc', 'sbi', 'larsen', 'toubro', 'l&t', 'gail', 'nhai',
-        'nhpc', 'pgcil', 'hpcl', 'bpcl', 'sail', 'jindal', 'suzlon', 'greenko', 'renew power',
-        'azure power', 'acme solar', 'hero', 'indian', 'bharat', 'hindustan'
-    ]
+    # Count matches
+    matches = 0
+    for marker in india_markers:
+        if re.search(r'\b' + re.escape(marker) + r'\b', text):
+            matches += 1
     
-    # Explicitly India-related terms
-    india_terms = [
-        'india', 'indian', 'ministry', 'government of india', 'goi', 'make in india', 
-        'atmanirbhar', 'pli scheme', 'union minister', 'pm modi', 'narendra modi',
-        'niti aayog', 'mnre', 'seci', 'ireda'
-    ]
-    
-    # Count indicators
-    location_count = sum(1 for location in indian_locations if location in processed_text)
-    entity_count = sum(1 for entity in indian_entities if entity in processed_text)
-    term_count = sum(1 for term in india_terms if term in processed_text)
-    
-    # Calculate score (with more weight on explicit India terms)
-    total_indicators = len(indian_locations) + len(indian_entities) + len(india_terms) * 2
-    weighted_count = location_count + entity_count + term_count * 2
-    
-    # Normalize to 0-1 range with a maximum weighted count cap
-    max_expected_matches = 10  # Expecting at most this many matches in legitimate articles
-    score = min(weighted_count, max_expected_matches) / max_expected_matches
-    
-    # Direct checks that provide high confidence
-    if ' india ' in f' {processed_text} ' or ' indian ' in f' {processed_text} ':
-        score = max(score, 0.6)  # Minimum score of 0.6 if 'india' or 'indian' is mentioned
-    
-    # Strong India indicators provide even higher confidence
-    for strong_indicator in ['government of india', 'ministry of', 'indian renewable', 'in india']:
-        if strong_indicator in processed_text:
-            score = max(score, 0.8)
-    
-    logger.info(f"India project confidence score: {score:.2f}")
-    return score > 0.4  # Threshold for considering it an Indian project
-
+    # Calculate confidence score
+    if matches >= 3:
+        return 0.95  # Very confident if multiple markers
+    elif matches >= 1:
+        return 0.7   # Moderately confident
+    else:
+        return 0.1   # Low confidence
+        
 def is_pipeline_project(text):
-    """Check if the project is in pipeline (announced or under construction)"""
+    """
+    Check if the project is in pipeline (announced or under construction)
+    Returns a score between 0 and 1 indicating confidence
+    """
     if not text:
-        return False
+        return 0.0
         
     # Preprocess text
-    processed_text = preprocess_text(text)
+    text = preprocess_text(text)
     
-    # Pipeline status indicators
-    pipeline_indicators = [
-        'announced', 'announce', 'plan', 'planning', 'proposed', 'proposal',
-        'will build', 'to build', 'to set up', 'setting up', 'will set up',
-        'under construction', 'construction began', 'breaking ground',
-        'agreement signed', 'mou signed', 'to invest', 'investing in',
-        'to be commissioned', 'will be operational', 'slated for', 'planned',
-        'in the works', 'development', 'upcoming', 'future', 'targets'
+    # Pipeline markers
+    pipeline_markers = [
+        'announce', 'announced', 'announcing', 'will build', 'will develop', 'plans to',
+        'proposed', 'proposal', 'upcoming', 'breaking ground', 'groundbreaking',
+        'to be built', 'to be completed', 'in development', 'under development',
+        'under construction', 'being built', 'beginning construction', 'start construction',
+        'expected to be operational', 'will be commissioned', 'signed agreement',
+        'signed mou', 'memorandum of understanding', 'awarded contract'
     ]
     
-    # Project keywords
-    project_indicators = [
-        'project', 'plant', 'facility', 'factory', 'manufacturing', 'power plant',
-        'farm', 'park', 'installation', 'gw', 'mw', 'gwh', 'mwh', 'capacity',
-        'production', 'construction'
+    # Negative markers (already completed)
+    completed_markers = [
+        'inaugurated', 'commissioned', 'completed', 'operational since', 
+        'has been operating', 'in operation since', 'has been running'
     ]
     
-    # Deployed project indicators (negative signals)
-    deployed_indicators = [
-        'inaugurated', 'commissioned', 'started operations', 'operational since',
-        'operating since', 'began production in', 'started producing',
-        'fully operational', 'opened', 'has been running', 'completed in',
-        'was completed'
-    ]
+    # Count pipeline matches
+    pipeline_matches = 0
+    for marker in pipeline_markers:
+        if re.search(r'\b' + re.escape(marker) + r'\b', text):
+            pipeline_matches += 1
     
-    # Check for pipeline indicators
-    is_pipeline = any(indicator in processed_text for indicator in pipeline_indicators)
+    # Count completed matches
+    completed_matches = 0
+    for marker in completed_markers:
+        if re.search(r'\b' + re.escape(marker) + r'\b', text):
+            completed_matches += 1
     
-    # Check for project mentions
-    has_project_indicators = any(indicator in processed_text for indicator in project_indicators)
-    
-    # Check for deployed indicators (negative)
-    is_not_deployed = not any(indicator in processed_text for indicator in deployed_indicators)
-    
-    # A project is in pipeline if it has pipeline indicators AND no deployment indicators
-    # OR if it has project indicators AND no deployment indicators
-    return (is_pipeline and is_not_deployed) or (has_project_indicators and is_not_deployed)
-
+    # Calculate score
+    if pipeline_matches >= 2 and completed_matches == 0:
+        return 0.9  # Very likely pipeline project
+    elif pipeline_matches >= 1 and completed_matches <= 1:
+        return 0.7  # Probable pipeline project
+    elif pipeline_matches == completed_matches:
+        return 0.4  # Unclear status
+    else:
+        return 0.1  # Likely completed or not a project announcement
 
 def determine_project_type(text):
-    """Determine renewable energy project type across expanded categories"""
+    """
+    Determine renewable energy project type across expanded categories
+    Returns a dictionary of scores for each type
+    """
     if not text:
-        return None
+        return {}
         
-    text_lower = text.lower()
+    # Preprocess text
+    text = preprocess_text(text)
     
-    # FIRST CHECK: Must be about renewables and energy
-    renewable_terms = [
-        "renewable energy", "clean energy", "green energy", "sustainable energy",
-        "solar", "wind", "hydro", "battery", "energy storage", "green hydrogen",
-        "biogas", "ethanol", "biofuel"
-    ]
-    
-    energy_focus = False
-    for term in renewable_terms:
-        if term in text_lower:
-            energy_focus = True
-            break
-    
-    if not energy_focus:
-        logger.info("Article lacks renewable energy focus")
-        return None
-    
-    # SECOND CHECK: Must have capacity, production, or investment details
-    capacity_patterns = [
-        r'\d+(?:\.\d+)?\s*(?:GW|MW|GWh|MWh)', # Power capacity
-        r'\d+(?:\.\d+)?\s*(?:TPD|tons per day)', # Production capacity (tons)
-        r'\d+(?:\.\d+)?\s*(?:KLPD|KL|million litres)', # Ethanol capacity
-        r'\d+(?:\.\d+)?\s*(?:MMSCMD)' # Gas capacity
-    ]
-    
-    has_capacity = False
-    for pattern in capacity_patterns:
-        if re.search(pattern, text, re.IGNORECASE):
-            has_capacity = True
-            break
-            
-    # Investment indicators
-    investment_pattern = r'(?:invest|funding|investment).*?(?:Rs\.?|INR|\$|USD|crore|billion|million)\s*\d+'
-    has_investment = re.search(investment_pattern, text, re.IGNORECASE) is not None
-    
-    if not (has_capacity or has_investment):
-        logger.info("Article lacks specific capacity or investment details")
-        return None
-    
-    # Define project categories and their keywords
-    project_types = {
-        "Solar": {
-            "general": ["solar", "photovoltaic", "pv", "solar panel", "solar cell", "solar module"],
-            "manufacturing": [
-                "solar cell manufacturing", "solar module production", "pv manufacturing facility",
-                "solar panel factory", "module manufacturing", "solar gigafactory", 
-                "solar manufacturing capacity", "wafer production", "cell production line"
-            ],
-            "generation": [
-                "solar plant", "solar power plant", "solar farm", "solar park", "solar generation",
-                "utility-scale solar", "grid-connected solar", "solar power project"
-            ]
-        },
-        
-        "Battery": {
-            "general": ["battery", "energy storage", "lithium-ion", "li-ion", "storage system", "bess"],
-            "manufacturing": [
-                "battery manufacturing", "battery factory", "cell production",
-                "gigafactory", "battery cell facility", "energy storage manufacturing",
-                "lithium-ion production", "battery manufacturing hub"
-            ],
-            "storage": [
-                "grid storage", "battery storage project", "energy storage facility",
-                "utility-scale storage", "power storage", "battery energy storage system"
-            ]
-        },
-        
-        "Wind": {
-            "general": ["wind energy", "wind power", "wind turbine", "windmill"],
-            "manufacturing": [
-                "wind turbine manufacturing", "turbine factory", "wind equipment facility",
-                "wind power component", "blade manufacturing", "nacelle production"
-            ],
-            "generation": [
-                "wind farm", "wind park", "wind power plant", "offshore wind", "onshore wind", 
-                "wind energy project", "wind generation facility"
-            ]
-        },
-        
-        "Hydro": {
-            "general": ["hydro power", "hydroelectric", "hydropower", "hydel", "water power"],
-            "generation": [
-                "hydro plant", "hydroelectric plant", "hydro project", "dam", "pumped storage", 
-                "small hydro", "micro hydro", "run-of-river", "hydroelectric facility"
-            ]
-        },
-        
-        "GreenHydrogen": {
-            "general": ["green hydrogen", "renewable hydrogen", "clean hydrogen", "hydrogen plant"],
-            "production": [
-                "hydrogen production", "electrolyzer", "electrolysis", "green ammonia",
-                "hydrogen facility", "hydrogen generation", "h2 production"
-            ]
-        },
-        
-        "Biogas": {
-            "general": ["biogas", "biomethane", "compressed biogas", "cbg", "bio-cng"],
-            "production": [
-                "biogas plant", "anaerobic digester", "biogas production", "organic waste to gas",
-                "biomethane facility", "biogas generation", "biogas upgrading"
-            ]
-        },
-        
-        "Ethanol": {
-            "general": ["ethanol", "bioethanol", "biofuel", "ethanol blending"],
-            "production": [
-                "ethanol plant", "distillery", "ethanol production facility", "biofuel plant",
-                "bioethanol facility", "ethanol manufacturing"
-            ]
-        }
+    # Define keywords and patterns for each project type
+    type_patterns = {
+        'solar': [
+            r'\bsolar\s+(?:power|energy|plant|project|farm|park|capacity|manufacturing|pv)',
+            r'\bphotovoltaic\b', r'\bsolar\s+panel', r'\bsolar\s+module',
+            r'\bpv\s+(?:project|plant|farm|park|manufacturing)'
+        ],
+        'battery': [
+            r'\bbattery\s+(?:storage|plant|manufacturing|gigafactory|production)',
+            r'\benergy\s+storage\b', r'\bess\b', r'\bbess\b',
+            r'\blithium(?:-|\s+)ion', r'\bstorage\s+system', r'\bcell\s+manufacturing'
+        ],
+        'wind': [
+            r'\bwind\s+(?:power|energy|farm|park|project|plant|turbine)',
+            r'\boffshore\s+wind', r'\bonshore\s+wind', r'\bwind\s+capacity'
+        ],
+        'hydro': [
+            r'\bhydro(?:power|electric)', r'\bhydel\b',
+            r'\bmicro(?:-|\s+)hydro', r'\bsmall\s+hydro', r'\bpump(?:ed)?\s+storage'
+        ],
+        'hydrogen': [
+            r'\bgreen\s+hydrogen', r'\bhydrogen\s+(?:production|plant|electrolyzer)',
+            r'\belectroly[zs]er', r'\bh2\s+production'
+        ],
+        'biofuel': [
+            r'\bbiofuel', r'\bbiogas', r'\bethanol\s+plant',
+            r'\bbiodiesel', r'\bbiomass\s+(?:plant|energy|power)'
+        ]
     }
     
-    # Calculate scores for each project type
-    type_scores = {}
-    for energy_type, categories in project_types.items():
-        score = 0
+    # Load training data to enhance detection
+    training_data = load_training_data()
+    
+    # Track scores for each type and keyword matches for diagnostic purposes
+    scores = {}
+    match_details = defaultdict(list)
+    
+    # Calculate scores based on regex patterns
+    for project_type, patterns in type_patterns.items():
+        score = 0.0
         
-        # Check general terms
-        for term in categories["general"]:
-            if f" {term} " in f" {text_lower} ":  # Exact match
-                score += 2
-            elif term in text_lower:  # Partial match
-                score += 1
+        for pattern in patterns:
+            matches = re.findall(pattern, text)
+            if matches:
+                score += 0.2 * min(len(matches), 3)  # Cap at 3 matches
+                match_details[project_type].extend(matches[:3])
         
-        # Check specific categories (manufacturing, generation, etc.)
-        for category, terms in categories.items():
-            if category == "general":
-                continue  # Already processed
-                
-            for term in terms:
-                if f" {term} " in f" {text_lower} ":  # Exact match
-                    score += 3  # Higher weight for specialized terms
-                elif term in text_lower:  # Partial match
-                    score += 1
+        # Normalize score to 0-1 range
+        scores[project_type] = min(0.9, score)
+    
+    # Enhance scores using training data if available
+    if training_data:
+        enhanced_scores = trainer.enhance_scraper_detection(text, scores)
         
-        type_scores[energy_type] = score
+        # Compare original and enhanced scores for diagnostic purposes
+        for project_type, score in enhanced_scores.items():
+            if project_type not in scores or abs(scores[project_type] - score) > 0.1:
+                logger.debug(f"Training enhanced {project_type} score: {scores.get(project_type, 0)} -> {score}")
+        
+        scores = enhanced_scores
     
-    # Find the highest scoring type
-    highest_score = 0
-    project_type = None
-    for energy_type, score in type_scores.items():
-        if score > highest_score:
-            highest_score = score
-            project_type = energy_type
+    # Log details for diagnostic purposes
+    logger.debug(f"Project type detection results: {scores}")
+    logger.debug(f"Pattern matches: {dict(match_details)}")
     
-    # THIRD CHECK: Scores must exceed minimum threshold
-    MIN_SCORE_THRESHOLD = 2  # Lower threshold to be more lenient with detection
-    
-    if highest_score < MIN_SCORE_THRESHOLD:
-        # Log top matches even if below threshold for diagnostic purposes
-        if type_scores:
-            top_types = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)[:2]
-            top_types_str = ", ".join([f"{t[0]}:{t[1]}" for t in top_types])
-            logger.info(f"Project type scores below threshold. Top matches: {top_types_str} (min threshold: {MIN_SCORE_THRESHOLD})")
-        else:
-            logger.info(f"No project types matched (min threshold: {MIN_SCORE_THRESHOLD})")
-        return None
-    
-    # Make sure we're prioritizing renewable categories if scores are close
-    # This helps ensure new categories get detected more easily
-    renewable_priorities = {
-        "Wind": 0.5,       # Add boost to Wind detection
-        "Hydro": 0.5,      # Add boost to Hydro detection
-        "GreenHydrogen": 1, # Add larger boost to Green Hydrogen
-        "Biogas": 0.5,     # Add boost to Biogas detection
-        "Ethanol": 0.5     # Add boost to Ethanol detection
-    }
-    
-    # Log current scores before applying boosts
-    sorted_scores = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
-    logger.info(f"Project type scores before boosts: {', '.join([f'{t[0]}:{t[1]:.1f}' for t in sorted_scores])}")
-    
-    # Apply priority boosts for renewable categories we want to promote
-    for energy_type, boost in renewable_priorities.items():
-        if energy_type in type_scores:
-            type_scores[energy_type] += boost
-            logger.debug(f"Applied {boost} boost to {energy_type}")
-            
-    # Recalculate highest score after boosts
-    highest_score = 0
-    project_type = None
-    for energy_type, score in type_scores.items():
-        if score > highest_score:
-            highest_score = score
-            project_type = energy_type
-    
-    # Log final scores after boosts
-    sorted_scores = sorted(type_scores.items(), key=lambda x: x[1], reverse=True)
-    logger.info(f"Project type scores after boosts: {', '.join([f'{t[0]}:{t[1]:.1f}' for t in sorted_scores])}")
-    logger.info(f"Selected project type: {project_type} with final score {highest_score:.1f}")
-    return project_type
-
+    return scores
 
 def extract_project_data(article_url, content=None):
-    """Extract project data from an article"""
-    try:
+    """
+    Extract project data from an article
+    
+    Args:
+        article_url: URL of the article
+        content: Optional pre-fetched content
+        
+    Returns:
+        Dictionary with extracted project data or None if not a relevant project
+    """
+    # Get article content if not provided
+    if not content:
+        content, title = extract_article_content(article_url)
         if not content:
-            content = extract_article_content(article_url)
-        
-        if not content or not content['text']:
-            logger.warning(f"No content extracted from {article_url}")
             return None
-        
-        # Log article title and basic information for better diagnostics
-        title = content.get('title', 'No Title')
-        text_length = len(content['text'])
-        logger.info(f"Processing article: '{title}' | Length: {text_length} chars | URL: {article_url}")
-        
-        # Create a record of potential scores and reasons for diagnostic tracking
-        diagnostic_scores = {}
-        rejection_reason = None
+    else:
+        # If content provided, try to extract title
+        title = None
+        try:
+            article = Article(article_url)
+            article.download()
+            article.parse()
+            title = article.title
+        except:
+            pass
             
-        # Determine if it's an India project
-        india_result = is_india_project(content['text'])
-        if not india_result:
-            logger.info(f"Not an India project: '{title}' | URL: {article_url}")
-            rejection_reason = "Not_India_Project"
-            
-            # If diagnostic mode is enabled, track this potential miss
-            if DIAGNOSTIC_MODE and 'diagnostic_tracker' in globals():
-                try:
-                    from diagnostic_tracker import diagnostic_tracker
-                    diagnostic_tracker.track_potential_project(
-                        article_url, 
-                        title, 
-                        content['text'][:500], 
-                        diagnostic_scores,
-                        rejection_reason
-                    )
-                except Exception as e:
-                    logger.error(f"Error tracking potential project: {e}")
-            
-            return None
-        else:
-            logger.info(f"India project confirmed: '{title}'")
-            
-        # Determine if it's a pipeline project
-        pipeline_result = is_pipeline_project(content['text'])
-        if not pipeline_result:
-            logger.info(f"Not a pipeline project: '{title}' | URL: {article_url}")
-            rejection_reason = "Not_Pipeline_Project"
-            
-            # If diagnostic mode is enabled, track this potential miss
-            if DIAGNOSTIC_MODE and 'diagnostic_tracker' in globals():
-                try:
-                    from diagnostic_tracker import diagnostic_tracker
-                    diagnostic_tracker.track_potential_project(
-                        article_url, 
-                        title, 
-                        content['text'][:500],
-                        diagnostic_scores,
-                        rejection_reason
-                    )
-                except Exception as e:
-                    logger.error(f"Error tracking potential project: {e}")
-                    
-            return None
-        else:
-            logger.info(f"Pipeline project confirmed: '{title}'")
-        
-        # Get scores for all potential project types
-        text_lower = content['text'].lower()
-        type_keywords = {
-            'Solar': ['solar', 'photovoltaic', 'pv', 'solar cell', 'solar panel', 'module', 'wafer'],
-            'Battery': ['battery', 'energy storage', 'storage system', 'lithium', 'cell', 'accumulator', 'bess'],
-            'Wind': ['wind', 'turbine', 'wind farm', 'wind park', 'wind energy', 'onshore', 'offshore'],
-            'Hydro': ['hydro', 'hydropower', 'hydroelectric', 'dam', 'pumped storage', 'water power'],
-            'GreenHydrogen': ['hydrogen', 'electrolyser', 'green hydrogen', 'electrolyzer', 'h2', 'fuel cell'],
-            'Biogas': ['biogas', 'biomethane', 'bioenergy', 'organic waste', 'anaerobic', 'digestate'],
-            'Ethanol': ['ethanol', 'biofuel', 'distillery', 'ethanol plant', 'e20', 'flex fuel', 'bioethanol']
-        }
-        
-        # Calculate preliminary scores for diagnostic purposes
-        for energy_type, keywords in type_keywords.items():
-            score = 0
-            for keyword in keywords:
-                if keyword in text_lower:
-                    score += 1
-            diagnostic_scores[energy_type] = score
-            
-        # Determine project type using the full algorithm
-        project_type = determine_project_type(content['text'])
-        if not project_type:
-            logger.info(f"Not a relevant project type: '{title}' | URL: {article_url}")
-            rejection_reason = "Not_Renewable_Energy_Project"
-            
-            # If diagnostic mode is enabled, track this potential miss with all scores
-            if DIAGNOSTIC_MODE and 'diagnostic_tracker' in globals():
-                try:
-                    from diagnostic_tracker import diagnostic_tracker
-                    diagnostic_tracker.track_potential_project(
-                        article_url, 
-                        title, 
-                        content['text'][:500], 
-                        diagnostic_scores,
-                        rejection_reason
-                    )
-                except Exception as e:
-                    logger.error(f"Error tracking potential project: {e}")
-                    
-            return None
-        else:
-            logger.info(f"Renewable project detected - Category: {project_type} | '{title}'")
-            
-        # Determine project category based on type and keywords in text
-        text_lower = content['text'].lower()
-        category = "NA"
-        
-        # Category detection keywords
-        category_keywords = {
-            "Manufacturing": ["manufacturing", "factory", "production", "facility", 
-                             "giga", "fabrication", "manufacturing hub"],
-            "Generation": ["generation", "power plant", "farm", "park", "power project", 
-                          "electricity generation", "power facility"],
-            "Storage": ["storage", "battery storage", "energy storage"],
-            "Production": ["production", "plant", "distillery", "biogas plant"],
-            "Distribution": ["distributed", "rooftop", "microgrid", "off-grid"]
-        }
-        
-        # Determine category by keyword matches
-        highest_score = 0
-        for cat, keywords in category_keywords.items():
-            score = 0
-            for keyword in keywords:
-                if keyword in text_lower:
-                    score += 1
-            if score > highest_score:
-                highest_score = score
-                category = cat
-                
-        # Adjust category based on project type
-        if project_type in ["GreenHydrogen", "Biogas", "Ethanol"]:
-            category = "Production"
-            
-        # Define inputs and outputs based on project type
-        input_output_map = {
-            "Solar": {"input": "Sunlight", "output": "Electricity"},
-            "Battery": {"input": "Electricity", "output": "Stored Electricity"},
-            "Wind": {"input": "Wind", "output": "Electricity"},
-            "Hydro": {"input": "Water", "output": "Electricity"},
-            "GreenHydrogen": {"input": "Water & Electricity", "output": "Hydrogen"},
-            "Biogas": {"input": "Organic Waste", "output": "Biogas/Biomethane"},
-            "Ethanol": {"input": "Biomass/Sugarcane", "output": "Ethanol Fuel"}
-        }
-        
-        # Basic data common to all project types
-        data = {
-            "Type": project_type,
-            "Name": "",
-            "Company": "",
-            "Ownership": "Private",  # Default
-            "PLI/Non-PLI": "Non PLI",  # Default
-            "State": "NA",
-            "Location": "NA",
-            "Announcement Date": datetime.now().strftime("%d-%m-%Y"),
-            "Category": category,
-            "Input": input_output_map.get(project_type, {}).get("input", "NA"),
-            "Output": input_output_map.get(project_type, {}).get("output", "NA"),
-            
-            # Initialize capacity fields based on project type
-            "Generation Capacity": 0,
-            "Storage Capacity": 0,
-            "Cell Capacity": 0,
-            "Module Capacity": 0,
-            "Integration Capacity": 0,
-            "Electrolyzer Capacity": 0,
-            "Hydrogen Production": 0,
-            "Biofuel Capacity": 0,
-            "Feedstock Type": "NA",
-            
-            # Status fields
-            "Status": "Announced",  # Default
-            "Land Acquisition": "Not Started",  # Default
-            "Power Approval": "Not Started",  # Default
-            "Environment Clearance": "Not Started",  # Default
-            "ALMM Listing": "Not Listed",  # Default
-            "Investment USD": 0,
-            "Investment INR": 0,
-            "Expected Completion": "Not Specified",  # Default
-        }
-        
-        # Extract project name - often in the title
-        if content['title']:
-            data["Name"] = content['title'][:100]  # Limit length
-        
-        # Extract company name
-        company_patterns = [
-            r'((?:[A-Z][a-z]*\s*){1,5}(?:Ltd|Limited|Corp|Corporation|Inc|Incorporated|Group|Energy|Power|Renewables|Solar|Technologies|Private Limited|Pvt\.\s*Ltd))',
-            r'((?:[A-Z][a-z]*\s*){1,3}(?:&\s*Co))',
-        ]
-        
-        for pattern in company_patterns:
-            matches = re.findall(pattern, content['text'])
-            if matches:
-                # Take the first match as the company name
-                data["Company"] = matches[0].strip()
-                break
-        
-        # Extract state and location
-        indian_states = [
-            'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-            'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-            'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-            'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana',
-            'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
-        ]
-        
-        # Look for state mentions
-        for state in indian_states:
-            if state.lower() in content['text'].lower():
-                data["State"] = state
-                
-                # Try to find a location near the state mention
-                state_index = content['text'].lower().find(state.lower())
-                if state_index > 0:
-                    # Look for a location within 100 characters before or after the state
-                    context = content['text'][max(0, state_index-100):min(len(content['text']), state_index+100)]
-                    
-                    # Look for "in {location}, {state}" or "at {location} in {state}" patterns
-                    location_patterns = [
-                        r'in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,?\s*' + state,
-                        r'at\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+in\s+' + state,
-                        r'near\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+in\s+' + state
-                    ]
-                    
-                    for pattern in location_patterns:
-                        location_matches = re.findall(pattern, context, re.IGNORECASE)
-                        if location_matches:
-                            data["Location"] = location_matches[0]
-                            break
-                
-                break
-        
-        # Extract capacity based on project type
-        if project_type in ["Solar", "Wind", "Hydro"]:
-            # Look for generation capacity (GW, MW)
-            capacity_patterns = [
-                r'(\d+(?:\.\d+)?)\s*GW', 
-                r'(\d+(?:\.\d+)?)\s*MW'
-            ]
-            
-            for pattern in capacity_patterns:
-                matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                if matches:
-                    capacity = float(matches[0])
-                    # Convert MW to GW if needed
-                    if 'MW' in pattern and not 'GW' in pattern:
-                        capacity /= 1000
-                    data["Generation Capacity"] = capacity
-                    break
-                    
-        elif project_type == "Battery":
-            # Look for storage capacity (GWh, MWh)
-            capacity_patterns = [
-                r'(\d+(?:\.\d+)?)\s*GWh', 
-                r'(\d+(?:\.\d+)?)\s*MWh'
-            ]
-            
-            for pattern in capacity_patterns:
-                matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                if matches:
-                    capacity = float(matches[0])
-                    # Convert MWh to GWh if needed
-                    if 'MWh' in pattern and not 'GWh' in pattern:
-                        capacity /= 1000
-                    data["Storage Capacity"] = capacity
-                    break
-                    
-            # Also look for manufacturing capacity for batteries
-            if "manufacturing" in content['text'].lower() or "factory" in content['text'].lower():
-                cell_patterns = [
-                    r'(\d+(?:\.\d+)?)\s*GWh\s*(?:cell|battery cell|cell production)',
-                    r'(\d+(?:\.\d+)?)\s*MWh\s*(?:cell|battery cell|cell production)'
-                ]
-                
-                for pattern in cell_patterns:
-                    matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                    if matches:
-                        capacity = float(matches[0])
-                        # Convert MWh to GWh if needed
-                        if 'MWh' in pattern and not 'GWh' in pattern:
-                            capacity /= 1000
-                        data["Cell Capacity"] = capacity
-                        break
-                        
-        elif project_type == "GreenHydrogen":
-            # Look for electrolyzer capacity (MW)
-            electrolyzer_patterns = [
-                r'(\d+(?:\.\d+)?)\s*GW\s*(?:electrolyzer|electrolysis)',
-                r'(\d+(?:\.\d+)?)\s*MW\s*(?:electrolyzer|electrolysis)'
-            ]
-            
-            for pattern in electrolyzer_patterns:
-                matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                if matches:
-                    capacity = float(matches[0])
-                    # Convert GW to MW if needed
-                    if 'GW' in pattern and not 'MW' in pattern:
-                        capacity *= 1000
-                    data["Electrolyzer Capacity"] = capacity
-                    break
-                    
-            # Look for hydrogen production capacity (tons)
-            production_patterns = [
-                r'(\d+(?:\.\d+)?)\s*(?:tons|tonnes)\s*(?:per day|per year|a day|a year|/day|/year)',
-                r'(\d+(?:\.\d+)?)\s*TPD',
-                r'(\d+(?:\.\d+)?)\s*TPY'
-            ]
-            
-            for pattern in production_patterns:
-                matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                if matches:
-                    data["Hydrogen Production"] = float(matches[0])
-                    break
-                    
-        elif project_type in ["Biogas", "Ethanol"]:
-            # For biogas, look for production capacity
-            if project_type == "Biogas":
-                capacity_patterns = [
-                    r'(\d+(?:\.\d+)?)\s*MMSCMD',
-                    r'(\d+(?:\.\d+)?)\s*(?:million cubic meters|million m3|MCM)'
-                ]
-                
-                for pattern in capacity_patterns:
-                    matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                    if matches:
-                        data["Biofuel Capacity"] = float(matches[0])
-                        break
-                        
-                # Look for feedstock type
-                feedstock_patterns = [
-                    r'(?:using|from|based on)\s+([a-z]+\s+(?:waste|residue|biomass))',
-                    r'feedstock:?\s+([a-z]+\s+(?:waste|residue|biomass))'
-                ]
-                
-                for pattern in feedstock_patterns:
-                    matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                    if matches:
-                        data["Feedstock Type"] = matches[0]
-                        break
-                        
-            # For ethanol, look for production capacity
-            elif project_type == "Ethanol":
-                capacity_patterns = [
-                    r'(\d+(?:\.\d+)?)\s*(?:KLPD|kilo\s*litres\s*per\s*day)',
-                    r'(\d+(?:\.\d+)?)\s*(?:million\s*litres|million\s*liters)'
-                ]
-                
-                for pattern in capacity_patterns:
-                    matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                    if matches:
-                        data["Biofuel Capacity"] = float(matches[0])
-                        break
-                        
-                # Look for feedstock type
-                feedstock_patterns = [
-                    r'(?:using|from|based on)\s+([a-z]+\s+(?:molasses|bagasse|grain|maize|corn|sugarcane))',
-                    r'feedstock:?\s+([a-z]+\s+(?:molasses|bagasse|grain|maize|corn|sugarcane))'
-                ]
-                
-                for pattern in feedstock_patterns:
-                    matches = re.findall(pattern, content['text'], re.IGNORECASE)
-                    if matches:
-                        data["Feedstock Type"] = matches[0]
-                        break
-        
-        # Extract investment details (common for all types)
-        investment_patterns = [
-            # USD patterns
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*\$\s*(\d+(?:\.\d+)?)\s*(?:billion|bn)',
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*\$\s*(\d+(?:\.\d+)?)\s*(?:million|mn)',
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*(?:USD|US\$)\s*(\d+(?:\.\d+)?)\s*(?:billion|bn)',
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*(?:USD|US\$)\s*(\d+(?:\.\d+)?)\s*(?:million|mn)',
-            
-            # INR patterns
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*Rs\.?\s*(\d+(?:\.\d+)?)\s*(?:billion|bn)',
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*Rs\.?\s*(\d+(?:\.\d+)?)\s*(?:crore|cr)',
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*INR\s*(\d+(?:\.\d+)?)\s*(?:billion|bn)',
-            r'(?:invest|investment of|funding of|capital of|cost of)\s*INR\s*(\d+(?:\.\d+)?)\s*(?:crore|cr)'
-        ]
-        
-        for i, pattern in enumerate(investment_patterns):
-            matches = re.findall(pattern, content['text'], re.IGNORECASE)
-            if matches:
-                amount = float(matches[0])
-                
-                # Process based on currency and unit
-                if i < 4:  # USD patterns
-                    # Convert to USD million
-                    if 'billion' in pattern or 'bn' in pattern:
-                        amount *= 1000  # Convert billion to million
-                    data["Investment USD"] = amount
-                    
-                    # Estimate INR equivalent (rough conversion)
-                    data["Investment INR"] = amount * 82.5 / 1000  # Convert USD million to INR billion
-                else:  # INR patterns
-                    # Convert to INR billion
-                    if 'crore' in pattern or 'cr' in pattern:
-                        amount /= 100  # Convert crore to billion
-                    data["Investment INR"] = amount
-                    
-                    # Estimate USD equivalent (rough conversion)
-                    data["Investment USD"] = amount * 1000 / 82.5  # Convert INR billion to USD million
-                break
-        
-        # Extract expected completion date
-        completion_patterns = [
-            r'(?:expected|scheduled|planned|slated|due)\s+(?:to|for)\s+(?:complete|commission|finish|be ready|be completed|be commissioned)\s+(?:by|in)\s+(?:the\s+)?(\w+\s+\d{4}|\d{4})',
-            r'(?:expected|scheduled|planned|slated|estimated)\s+(?:completion|commissioning)\s+(?:date|time|by|in)\s+(?:the\s+)?(\w+\s+\d{4}|\d{4})',
-            r'(?:will|to)\s+be\s+(?:completed|commissioned|operational|ready)\s+(?:by|in)\s+(?:the\s+)?(\w+\s+\d{4}|\d{4})'
-        ]
-        
-        for pattern in completion_patterns:
-            matches = re.findall(pattern, content['text'], re.IGNORECASE)
-            if matches:
-                data["Expected Completion"] = matches[0]
-                break
-        
-        # Extract project status if available
-        status_patterns = {
-            "Announced": [r'announced', r'plans to', r'will develop', r'proposed'],
-            "Planning": [r'planning stage', r'in planning', r'planned for'],
-            "Approved": [r'approved', r'received approval', r'got clearance'],
-            "Land Acquisition": [r'acquiring land', r'land acquisition', r'secured land'],
-            "Under Construction": [r'under construction', r'construction (?:has )?started', r'being constructed'],
-            "Partially Commissioned": [r'partially commissioned', r'first phase', r'partially operational']
-        }
-        
-        for status, patterns in status_patterns.items():
-            for pattern in patterns:
-                if re.search(pattern, content['text'], re.IGNORECASE):
-                    data["Status"] = status
-                    break
-            if data["Status"] != "Announced":  # Stop if we found a more specific status
-                break
-                
-        # Clean up the name if needed
-        if data["Name"] and len(data["Name"]) > 20 and not data["Company"]:
-            # Try to extract company name from the title
-            company_match = re.search(company_patterns[0], data["Name"])
-            if company_match:
-                data["Company"] = company_match.group(1)
-        
-        # Set source
-        data["Source"] = article_url
-        
-        return data
-        
-    except Exception as e:
-        logger.error(f"Error extracting project data: {str(e)}")
+    # Check if it's about an Indian project
+    india_score = is_india_project(content)
+    if india_score < 0.5:
+        logger.info(f"Article rejected: Not about an Indian project (score: {india_score})")
         return None
+    
+    # Check if it's about a renewable energy project
+    project_type_scores = determine_project_type(content)
+    
+    # Find the most likely project type
+    max_score = 0
+    project_type = None
+    
+    for type_name, score in project_type_scores.items():
+        if score > max_score:
+            max_score = score
+            project_type = type_name
+    
+    # Reject if no strong project type identified
+    if max_score < 0.4:
+        logger.info(f"Article rejected: Not about a renewable energy project (max score: {max_score})")
+        
+        # Track potential misses for diagnostics
+        try:
+            from diagnostic_tracker import diagnostic_tracker
+            diagnostic_tracker.track_potential_project(
+                article_url,
+                title or "Unknown Title",
+                content[:500] + "...",
+                project_type_scores,
+                f"Low confidence in project type (max score: {max_score})"
+            )
+            logger.info(f"Tracked as potential miss in diagnostic tracker")
+        except ImportError:
+            logger.debug("Diagnostic tracker not available")
+        
+        return None
+    
+    # Check if it's a pipeline project
+    pipeline_score = is_pipeline_project(content)
+    if pipeline_score < 0.4:
+        logger.info(f"Article rejected: Not about a pipeline project (score: {pipeline_score})")
+        return None
+    
+    # Extract project details based on identified type
+    project_data = {
+        'type': project_type.capitalize(),
+        'name': extract_project_name(content, title),
+        'company': extract_company(content),
+        'location': extract_location(content),
+        'source': article_url,
+        'announcement_date': datetime.now().strftime('%Y-%m-%d')
+    }
+    
+    # Extract capacity based on project type
+    if project_type == 'solar':
+        project_data.update(extract_solar_capacity(content))
+    elif project_type == 'battery':
+        project_data.update(extract_battery_capacity(content))
+    elif project_type == 'wind':
+        project_data.update(extract_wind_capacity(content))
+    elif project_type == 'hydro':
+        project_data.update(extract_hydro_capacity(content))
+    elif project_type == 'hydrogen':
+        project_data.update(extract_hydrogen_capacity(content))
+    elif project_type == 'biofuel':
+        project_data.update(extract_biofuel_capacity(content))
+    
+    # Extract investment information
+    project_data.update(extract_investment(content))
+    
+    # Set expected completion
+    project_data['expected_completion'] = extract_completion_date(content)
+    
+    logger.info(f"Extracted project data for {project_type} project: {project_data['name']}")
+    return project_data
+
+def extract_project_name(content, title=None):
+    """Extract project name from content or title"""
+    # Try to extract from title first
+    if title:
+        # Look for project name patterns in title
+        project_patterns = [
+            r'(?:announces|to set up|to build|developing|launches) ([^.]+)',
+            r'([^.]+(?:solar|battery|energy|power|wind|hydro|hydrogen|biofuel|renewable)[^.]+)',
+        ]
+        
+        for pattern in project_patterns:
+            match = re.search(pattern, title, re.IGNORECASE)
+            if match:
+                # Limit length and clean up
+                name = match.group(1).strip()
+                # Truncate long names
+                if len(name) > 80:
+                    name = name[:77] + '...'
+                return name
+    
+    # Extract from first few paragraphs of content as fallback
+    if content:
+        paragraphs = content.split('\n')
+        for para in paragraphs[:3]:
+            for phrase in ['project', 'plant', 'farm', 'facility']:
+                match = re.search(fr'([^.]+{phrase}[^.]+)', para, re.IGNORECASE)
+                if match:
+                    name = match.group(1).strip()
+                    # Truncate long names
+                    if len(name) > 80:
+                        name = name[:77] + '...'
+                    return name
+    
+    # If no specific name found, use title or generic name
+    if title:
+        return title[:80]
+    return "Unnamed Renewable Energy Project"
+
+def extract_solar_capacity(content):
+    """Extract capacity information for solar projects"""
+    result = {'generation_capacity': None}
+    
+    # Patterns for solar capacity
+    capacity_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:GW|gigawatt)',
+        r'(\d+(?:\.\d+)?)\s*(?:MW|megawatt)',
+        r'(\d+(?:\.\d+)?)[- ](?:GW|gigawatt)',
+        r'(\d+(?:\.\d+)?)[- ](?:MW|megawatt)'
+    ]
+    
+    for pattern in capacity_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            # Convert MW to GW if necessary
+            if 'MW' in match.group(0) or 'megawatt' in match.group(0).lower():
+                value /= 1000
+            result['generation_capacity'] = value
+            break
+            
+    # Check for manufacturing capacity
+    manufacturing_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:GW|gigawatt)(?:[- ]capacity)?\s+(?:cell|module|manufacturing)',
+        r'(?:cell|module|manufacturing)(?:[- ]capacity)?\s+of\s+(\d+(?:\.\d+)?)\s*(?:GW|gigawatt)'
+    ]
+    
+    for pattern in manufacturing_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            if 'cell' in match.group(0).lower():
+                result['cell_capacity'] = value
+            elif 'module' in match.group(0).lower():
+                result['module_capacity'] = value
+            else:
+                # Generic manufacturing capacity
+                result['manufacturing_capacity'] = value
+    
+    return result
+
+def extract_battery_capacity(content):
+    """Extract capacity information for battery projects"""
+    result = {'storage_capacity': None}
+    
+    # Patterns for battery capacity
+    capacity_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:GWh|gigawatt[ -]hour)',
+        r'(\d+(?:\.\d+)?)\s*(?:MWh|megawatt[ -]hour)',
+        r'(\d+(?:\.\d+)?)[- ](?:GWh|gigawatt[ -]hour)',
+        r'(\d+(?:\.\d+)?)[- ](?:MWh|megawatt[ -]hour)',
+        r'storage capacity of (\d+(?:\.\d+)?)\s*(?:GWh|MWh|gigawatt[ -]hour|megawatt[ -]hour)'
+    ]
+    
+    for pattern in capacity_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            # Convert MWh to GWh if necessary
+            if 'MWh' in match.group(0) or 'megawatt' in match.group(0).lower():
+                value /= 1000
+            result['storage_capacity'] = value
+            break
+            
+    # Check for manufacturing capacity
+    manufacturing_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:GWh|gigawatt[ -]hour)(?:[- ]capacity)?\s+(?:cell|battery|manufacturing)',
+        r'(?:cell|battery|manufacturing)(?:[- ]capacity)?\s+of\s+(\d+(?:\.\d+)?)\s*(?:GWh|gigawatt[ -]hour)'
+    ]
+    
+    for pattern in manufacturing_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            if 'cell' in match.group(0).lower():
+                result['cell_capacity'] = value
+            else:
+                # Generic manufacturing capacity
+                result['manufacturing_capacity'] = value
+    
+    return result
+
+def extract_wind_capacity(content):
+    """Extract capacity information for wind projects"""
+    result = {'generation_capacity': None}
+    
+    # Patterns for wind capacity
+    capacity_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:GW|gigawatt)',
+        r'(\d+(?:\.\d+)?)\s*(?:MW|megawatt)',
+        r'(\d+(?:\.\d+)?)[- ](?:GW|gigawatt)',
+        r'(\d+(?:\.\d+)?)[- ](?:MW|megawatt)',
+        r'wind capacity of (\d+(?:\.\d+)?)\s*(?:GW|MW|gigawatt|megawatt)'
+    ]
+    
+    for pattern in capacity_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            # Convert MW to GW if necessary
+            if 'MW' in match.group(0) or 'megawatt' in match.group(0).lower():
+                value /= 1000
+            result['generation_capacity'] = value
+            break
+    
+    return result
+
+def extract_hydro_capacity(content):
+    """Extract capacity information for hydro projects"""
+    result = {'generation_capacity': None}
+    
+    # Patterns for hydro capacity
+    capacity_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:GW|gigawatt)',
+        r'(\d+(?:\.\d+)?)\s*(?:MW|megawatt)',
+        r'hydro(?:power|electric)? capacity of (\d+(?:\.\d+)?)\s*(?:GW|MW|gigawatt|megawatt)'
+    ]
+    
+    for pattern in capacity_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            # Convert MW to GW if necessary
+            if 'MW' in match.group(0) or 'megawatt' in match.group(0).lower():
+                value /= 1000
+            result['generation_capacity'] = value
+            break
+    
+    return result
+
+def extract_hydrogen_capacity(content):
+    """Extract capacity information for hydrogen projects"""
+    result = {
+        'electrolyzer_capacity': None,
+        'hydrogen_production': None
+    }
+    
+    # Patterns for electrolyzer capacity
+    electrolyzer_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:GW|gigawatt)\s+electroly[zs]er',
+        r'(\d+(?:\.\d+)?)\s*(?:MW|megawatt)\s+electroly[zs]er',
+        r'electroly[zs]er capacity of (\d+(?:\.\d+)?)\s*(?:GW|MW|gigawatt|megawatt)'
+    ]
+    
+    for pattern in electrolyzer_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            # Convert MW to GW if necessary
+            if 'MW' in match.group(0) or 'megawatt' in match.group(0).lower():
+                value /= 1000
+            result['electrolyzer_capacity'] = value
+            break
+    
+    # Patterns for hydrogen production
+    production_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:tons|tonnes)\s+(?:per|a|\/)\s+(?:day|annum|year)',
+        r'produce (\d+(?:\.\d+)?)\s*(?:tons|tonnes)',
+        r'production of (\d+(?:\.\d+)?)\s*(?:tons|tonnes)'
+    ]
+    
+    for pattern in production_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            # We store production in tons per day
+            if 'annum' in match.group(0).lower() or 'year' in match.group(0).lower():
+                value /= 365  # Convert annual to daily
+            result['hydrogen_production'] = value
+            break
+    
+    return result
+
+def extract_biofuel_capacity(content):
+    """Extract capacity information for biofuel projects"""
+    result = {
+        'biofuel_capacity': None,
+        'feedstock_type': None
+    }
+    
+    # Patterns for biofuel capacity
+    capacity_patterns = [
+        r'(\d+(?:\.\d+)?)\s*(?:million|thousand)?\s*(?:liters|litres|gallons)',
+        r'produce (\d+(?:\.\d+)?)\s*(?:million|thousand)?\s*(?:liters|litres|gallons)',
+        r'capacity of (\d+(?:\.\d+)?)\s*(?:million|thousand)?\s*(?:liters|litres|gallons)'
+    ]
+    
+    for pattern in capacity_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            # Apply multiplier based on unit
+            if 'million' in match.group(0).lower():
+                value *= 1000000
+            elif 'thousand' in match.group(0).lower():
+                value *= 1000
+            # Convert gallons to liters if necessary
+            if 'gallons' in match.group(0).lower():
+                value *= 3.78541  # Gallons to liters conversion
+            
+            result['biofuel_capacity'] = value
+            break
+    
+    # Patterns for feedstock type
+    feedstock_patterns = [
+        r'(?:using|from|based on) (\w+) (?:as feedstock|as raw material)',
+        r'feedstock\s+(?:is|from)\s+(\w+)',
+        r'(\w+)(?:-|\s+)based biofuel'
+    ]
+    
+    feedstock_types = [
+        'sugarcane', 'corn', 'wheat', 'rice', 'sorghum', 'barley', 
+        'agricultural waste', 'agricultural residue', 'crop residue',
+        'forest residue', 'wood', 'waste', 'municipal waste', 'algae'
+    ]
+    
+    # Direct mentions of feedstock
+    for feedstock in feedstock_types:
+        if re.search(r'\b' + re.escape(feedstock) + r'\b', content, re.IGNORECASE):
+            result['feedstock_type'] = feedstock
+            break
+    
+    # Indirect mentions using patterns
+    if not result['feedstock_type']:
+        for pattern in feedstock_patterns:
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                result['feedstock_type'] = match.group(1).lower()
+                break
+    
+    return result
+
+def extract_location(content):
+    """Extract location information from text"""
+    indian_states = [
+        'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+        'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+        'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+        'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+        'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+    ]
+    
+    # Dictionary to hold state and city/district
+    location_data = {'state': None, 'location': None}
+    
+    # Extract state
+    for state in indian_states:
+        # Look for both full state name and common abbreviations
+        state_pattern = r'\b' + re.escape(state) + r'\b'
+        if re.search(state_pattern, content, re.IGNORECASE):
+            location_data['state'] = state
+            break
+    
+    # Extract more specific location if state is found
+    if location_data['state']:
+        # Find city or district near mention of state
+        state_pattern = r'\b' + re.escape(location_data['state']) + r'\b'
+        state_matches = list(re.finditer(state_pattern, content, re.IGNORECASE))
+        
+        for match in state_matches:
+            # Look for location before and after state mention
+            start_pos = max(0, match.start() - 100)
+            end_pos = min(len(content), match.end() + 100)
+            
+            context = content[start_pos:end_pos]
+            
+            # Look for "in X" or "at X" patterns
+            location_patterns = [
+                r'in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',
+                r'at\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',
+                r'near\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',
+                r'district\s+(?:of\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)'
+            ]
+            
+            for pattern in location_patterns:
+                locations = re.findall(pattern, context)
+                if locations:
+                    for loc in locations:
+                        # Skip if location is a state or common words
+                        if loc not in indian_states and loc.lower() not in ['india', 'delhi']:
+                            location_data['location'] = loc
+                            break
+            
+            if location_data['location']:
+                break
+    
+    # Return state or "India" as fallback if no specific state found
+    if not location_data['state']:
+        return "India"
+    
+    # Return combined location or just state if no specific location
+    if location_data['location']:
+        return f"{location_data['location']}, {location_data['state']}"
+    else:
+        return location_data['state']
+
+def extract_company(content):
+    """Extract company name from text"""
+    # Common Indian renewable energy companies
+    common_companies = [
+        'Adani Green', 'ReNew Power', 'Tata Power', 'NTPC', 'Greenko',
+        'JSW Energy', 'Azure Power', 'Hero Future Energies', 'Acme Solar',
+        'Avaada Energy', 'Amplus Solar', 'Cleantech Solar', 'Sembcorp',
+        'Suzlon', 'SB Energy', 'EDF Renewables', 'Inox Wind', 'SJVN',
+        'Reliance Power', 'Torrent Power', 'SECI', 'CLP India', 'Mytrah Energy'
+    ]
+    
+    # First look for exact matches of common companies
+    for company in common_companies:
+        if re.search(r'\b' + re.escape(company) + r'\b', content, re.IGNORECASE):
+            return company
+    
+    # Try to extract using patterns
+    company_patterns = [
+        r'([A-Z][a-zA-Z\s]+(?:Energy|Power|Green|Renewables|Solar|Group|Limited|Ltd|Wind|Electric|Corporation|India|Pvt|Private))(?:\s+(?:Ltd|Limited|Inc|Pvt\.?|Private|Corp\.?|Corporation))?',
+        r'([A-Z][a-zA-Z\s]+)\s+(?:has announced|is setting up|will build|plans to|announced)',
+        r'(?:by|from)\s+([A-Z][a-zA-Z\s]+(?:Energy|Power|Green|Renewables|Solar|Group|Wind|Electric|Corporation|Ltd|Limited))'
+    ]
+    
+    for pattern in company_patterns:
+        matches = re.findall(pattern, content)
+        if matches:
+            # Clean up matches and filter out common non-company phrases
+            filtered_matches = []
+            
+            for match in matches:
+                if isinstance(match, tuple):  # Some regex groups return tuples
+                    match = match[0]
+                
+                match = match.strip()
+                
+                # Skip if too short or contains common words
+                if len(match) < 4:
+                    continue
+                
+                if match.lower() in ['the', 'this', 'that', 'renewable', 'project']:
+                    continue
+                
+                # Skip government entities which are often mentioned but not the developer
+                if any(term in match.lower() for term in ['ministry', 'government of', 'government']):
+                    continue
+                
+                filtered_matches.append(match)
+            
+            if filtered_matches:
+                # Return the most frequently mentioned company
+                from collections import Counter
+                company_counter = Counter(filtered_matches)
+                most_common = company_counter.most_common(1)[0][0]
+                
+                # Truncate long company names
+                if len(most_common) > 50:
+                    most_common = most_common[:47] + '...'
+                    
+                return most_common
+    
+    return "Unknown"
+
+def extract_investment(content):
+    """Extract investment information"""
+    result = {
+        'investment_usd': None,
+        'investment_inr': None
+    }
+    
+    # USD patterns
+    usd_patterns = [
+        r'(?:investment of|invest|invested|cost of|worth|valued at)\s+(?:USD|US\$|\$)\s*(\d+(?:\.\d+)?)\s*(?:billion|bn|million|mn|m)',
+        r'(?:USD|US\$|\$)\s*(\d+(?:\.\d+)?)\s*(?:billion|bn|million|mn|m)\s+(?:investment|project|cost)',
+        r'(\d+(?:\.\d+)?)\s*(?:billion|bn|million|mn|m)\s+(?:USD|US\$|\$)'
+    ]
+    
+    for pattern in usd_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            
+            # Apply multiplier based on unit
+            if 'billion' in match.group(0).lower() or 'bn' in match.group(0).lower():
+                value *= 1000  # Convert billion to million
+            
+            result['investment_usd'] = value
+            break
+    
+    # INR patterns
+    inr_patterns = [
+        r'(?:investment of|invest|invested|cost of|worth|valued at)\s+(?:INR|Rs|₹)\s*(\d+(?:\.\d+)?)\s*(?:crore|cr|lakh|billion|bn|million|mn|m)',
+        r'(?:INR|Rs|₹)\s*(\d+(?:\.\d+)?)\s*(?:crore|cr|lakh|billion|bn|million|mn|m)\s+(?:investment|project|cost)',
+        r'(\d+(?:\.\d+)?)\s*(?:crore|cr|lakh|billion|bn|million|mn|m)\s+(?:INR|Rs|₹)'
+    ]
+    
+    for pattern in inr_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            
+            # Convert to billion INR
+            if 'crore' in match.group(0).lower() or 'cr' in match.group(0).lower():
+                value /= 100  # Convert crore to billion
+            elif 'lakh' in match.group(0).lower():
+                value /= 10000  # Convert lakh to billion
+            elif 'million' in match.group(0).lower() or 'mn' in match.group(0).lower() or 'm' in match.group(0).lower():
+                value /= 1000  # Convert million to billion
+            
+            result['investment_inr'] = value
+            break
+    
+    # If we have USD but not INR, estimate INR (using approximate conversion)
+    if result['investment_usd'] and not result['investment_inr']:
+        result['investment_inr'] = result['investment_usd'] * 0.083  # Approximate USD to INR billion conversion
+    
+    # If we have INR but not USD, estimate USD
+    if result['investment_inr'] and not result['investment_usd']:
+        result['investment_usd'] = result['investment_inr'] * 12  # Approximate INR billion to USD million conversion
+    
+    return result
+
+def extract_completion_date(content):
+    """Extract expected completion date"""
+    # Look for completion date patterns
+    date_patterns = [
+        r'(?:expected|scheduled|planned|slated) to (?:complete|be completed|commissioned|be commissioned|operational|be operational) by (\d{4})',
+        r'(?:expected|scheduled|planned|slated) (?:completion|commissioning) (?:date|in|by) (\d{4})',
+        r'(?:completion|commissioning) is (?:expected|scheduled|planned|slated) (?:in|by) (\d{4})',
+        r'(?:expected|scheduled|planned|slated) to (?:complete|be completed|commissioned|be operational) in Q[1-4] (\d{4})',
+        r'(?:expected|scheduled|planned|slated) to (?:complete|be completed|commissioned|be operational) in (?:January|February|March|April|May|June|July|August|September|October|November|December) (\d{4})'
+    ]
+    
+    for pattern in date_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            year = match.group(1)
+            
+            # If we have quarter information
+            quarter_match = re.search(r'Q([1-4]) ' + re.escape(year), match.group(0), re.IGNORECASE)
+            if quarter_match:
+                return f"Q{quarter_match.group(1)} {year}"
+            
+            # If we have month information
+            month_match = re.search(r'(January|February|March|April|May|June|July|August|September|October|November|December) ' + re.escape(year), match.group(0), re.IGNORECASE)
+            if month_match:
+                return f"{month_match.group(1)} {year}"
+            
+            return year
+    
+    # If no specific year found, look for general timeframes
+    timeframe_patterns = [
+        r'(?:expected|scheduled|planned|slated) to (?:complete|be completed|commissioned|be operational) in (\d+) (?:years|months)',
+        r'(?:expected|scheduled|planned|slated) (?:completion|commissioning) in (\d+) (?:years|months)',
+        r'within (?:the next|next) (\d+) (?:years|months)'
+    ]
+    
+    current_year = datetime.now().year
+    
+    for pattern in timeframe_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            timeframe = int(match.group(1))
+            if 'years' in match.group(0).lower():
+                return str(current_year + timeframe)
+            elif 'months' in match.group(0).lower():
+                if timeframe >= 12:
+                    return str(current_year + (timeframe // 12))
+                else:
+                    return str(current_year + 1)
+    
+    return "Unknown"
+
+
+# Main function for testing
+if __name__ == "__main__":
+    # Test with a sample article URL
+    sample_url = "https://www.example.com/sample-article"  # Replace with a real URL for testing
+    
+    # Set up logging for testing
+    logging.basicConfig(level=logging.DEBUG)
+    
+    # Load training data
+    training_data = load_training_data()
+    print(f"Loaded training data for project types: {list(training_data.keys())}")
+    
+    # Test extraction (mock data for testing)
+    test_content = """
+    ReNew Power announced a new 500 MW solar power project in Gujarat.
+    The project is expected to be completed by 2026 and will require an investment of USD 400 million.
+    This will be one of the largest solar installations in western India.
+    """
+    
+    results = extract_project_data(sample_url, test_content)
+    if results:
+        print("Extracted project data:")
+        for key, value in results.items():
+            print(f"  - {key}: {value}")
+    else:
+        print("No relevant project data extracted")
