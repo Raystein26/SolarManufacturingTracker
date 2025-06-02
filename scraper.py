@@ -352,6 +352,17 @@ def is_india_project(text):
     entity_count = sum(1 for entity in indian_entities if entity in processed_text)
     term_count = sum(1 for term in india_terms if term in processed_text)
     
+    # Check for explicit non-India country mentions that would disqualify
+    non_india_countries = [
+        'china', 'chinese', 'usa', 'united states', 'america', 'american', 'europe', 'european',
+        'japan', 'japanese', 'south korea', 'korea', 'australia', 'germany', 'france', 'uk',
+        'united kingdom', 'britain', 'canada', 'brazil', 'mexico', 'thailand', 'vietnam',
+        'singapore', 'malaysia', 'indonesia', 'philippines', 'taiwan', 'hong kong'
+    ]
+    
+    # If foreign country is mentioned and India is not strongly indicated, reject
+    foreign_country_mentioned = any(country in processed_text for country in non_india_countries)
+    
     # Calculate score (with more weight on explicit India terms)
     total_indicators = len(indian_locations) + len(indian_entities) + len(india_terms) * 2
     weighted_count = location_count + entity_count + term_count * 2
@@ -361,16 +372,28 @@ def is_india_project(text):
     score = min(weighted_count, max_expected_matches) / max_expected_matches
     
     # Direct checks that provide high confidence
-    if ' india ' in f' {processed_text} ' or ' indian ' in f' {processed_text} ':
-        score = max(score, 0.6)  # Minimum score of 0.6 if 'india' or 'indian' is mentioned
+    india_explicitly_mentioned = ' india ' in f' {processed_text} ' or ' indian ' in f' {processed_text} '
+    if india_explicitly_mentioned:
+        score = max(score, 0.7)  # Minimum score of 0.7 if 'india' or 'indian' is mentioned
     
     # Strong India indicators provide even higher confidence
-    for strong_indicator in ['government of india', 'ministry of', 'indian renewable', 'in india']:
-        if strong_indicator in processed_text:
-            score = max(score, 0.8)
+    strong_india_indicators = ['government of india', 'ministry of', 'indian renewable', 'in india', 'new delhi', 'mumbai', 'bangalore']
+    strong_indicator_found = any(indicator in processed_text for indicator in strong_india_indicators)
+    if strong_indicator_found:
+        score = max(score, 0.9)
+    
+    # Apply stricter filtering if foreign country mentioned
+    if foreign_country_mentioned and not (india_explicitly_mentioned or strong_indicator_found):
+        logger.info(f"Foreign country mentioned without strong India indicators - rejecting")
+        return False
+    
+    # Require explicit India mention for acceptance
+    if not india_explicitly_mentioned and score < 0.8:
+        logger.info(f"No explicit India mention and low confidence score: {score:.2f}")
+        return False
     
     logger.info(f"India project confidence score: {score:.2f}")
-    return score > 0.4  # Threshold for considering it an Indian project
+    return score > 0.6  # Raised threshold for considering it an Indian project
 
 def is_pipeline_project(text):
     """Check if the project is in pipeline (announced or under construction)"""
