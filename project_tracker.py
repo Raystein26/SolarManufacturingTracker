@@ -201,10 +201,15 @@ def check_source(source):
                 if project_data:
                     # Check if project already exists with similar name and company
                     try:
-                        existing_projects = Project.query.filter(
-                            Project.name.ilike(f"%{project_data['Name']}%"),
-                            Project.company.ilike(f"%{project_data['Company']}%")
-                        ).all()
+                        name = project_data.get('name', '')
+                        company = project_data.get('company', '')
+                        if name and company:
+                            existing_projects = Project.query.filter(
+                                Project.name.ilike(f"%{name}%"),
+                                Project.company.ilike(f"%{company}%")
+                            ).all()
+                        else:
+                            existing_projects = []
                     except Exception as e:
                         logger.error(f"Error querying existing projects: {str(e)}")
                         existing_projects = []
@@ -226,31 +231,39 @@ def check_source(source):
                             else:
                                 announcement_date = datetime.datetime.now().date()
                             
-                            # Create new project with separate attribute assignment
+                            # Create new project with correct lowercase keys from scraper
                             new_project = Project()
                             new_project.index = next_index
-                            new_project.type = project_data["Type"]
-                            new_project.name = project_data["Name"]
-                            new_project.company = project_data["Company"]
-                            new_project.ownership = project_data["Ownership"]
-                            new_project.pli_status = project_data["PLI/Non-PLI"]
-                            new_project.state = project_data["State"]
-                            new_project.location = project_data["Location"]
+                            new_project.type = project_data.get("type", "Unknown")
+                            new_project.name = project_data.get("name", "Renewable Energy Project")
+                            new_project.company = project_data.get("company", "Unknown")
+                            new_project.ownership = "Private"  # Default value
+                            new_project.pli_status = "Non-PLI"  # Default value
+                            new_project.state = project_data.get("location", "Unknown")
+                            new_project.location = project_data.get("location", "Unknown")
                             new_project.announcement_date = announcement_date
-                            new_project.category = project_data["Category"]
-                            new_project.input_type = project_data["Input"]
-                            new_project.output_type = project_data["Output"]
-                            new_project.cell_capacity = project_data.get("Cell Capacity", 0)
-                            new_project.module_capacity = project_data.get("Module Capacity", 0)
-                            new_project.integration_capacity = project_data.get("Integration Capacity", 0)
-                            new_project.status = project_data["Status"]
-                            new_project.land_acquisition = project_data["Land Acquisition"]
-                            new_project.power_approval = project_data["Power Approval"]
-                            new_project.environment_clearance = project_data["Environment Clearance"]
-                            new_project.almm_listing = project_data["ALMM Listing"]
-                            new_project.investment_usd = project_data.get("Investment USD", 0)
-                            new_project.investment_inr = project_data.get("Investment INR", 0)
-                            new_project.expected_completion = project_data["Expected Completion"]
+                            new_project.category = "Generation"  # Default category
+                            new_project.input_type = "N/A"
+                            new_project.output_type = "Electricity"
+                            
+                            # Set capacity based on project type
+                            if project_data.get("generation_capacity"):
+                                new_project.generation_capacity = project_data["generation_capacity"]
+                            if project_data.get("storage_capacity"):
+                                new_project.storage_capacity = project_data["storage_capacity"]
+                            if project_data.get("electrolyzer_capacity"):
+                                new_project.electrolyzer_capacity = project_data["electrolyzer_capacity"]
+                            if project_data.get("biofuel_capacity"):
+                                new_project.biofuel_capacity = project_data["biofuel_capacity"]
+                            
+                            new_project.status = project_data.get("status", "Pipeline")
+                            new_project.land_acquisition = "N/A"
+                            new_project.power_approval = "N/A"
+                            new_project.environment_clearance = "N/A"
+                            new_project.almm_listing = "N/A"
+                            new_project.investment_usd = project_data.get("investment_usd", 0)
+                            new_project.investment_inr = 0  # Will be calculated if needed
+                            new_project.expected_completion = project_data.get("expected_completion", "2025")
                             new_project.last_updated = datetime.datetime.now().date()
                             new_project.source = article_url
                             
