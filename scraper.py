@@ -309,8 +309,8 @@ def is_india_project(text):
         if company in text_lower:
             company_count += 1
     
-    # Return True if we have enough location and company indicators
-    return (location_count >= 1 and company_count >= 1)
+    # Return True if we have at least one location indicator (more lenient)
+    return (location_count >= 1 or company_count >= 1)
 
 def is_renewable_project(text):
     """Determine if the text is about a renewable energy project"""
@@ -371,12 +371,12 @@ def is_renewable_project(text):
         best_category = max(scores.items(), key=lambda x: x[1])
         logger.debug(f"Best category: {best_category[0]} with score {best_category[1]}")
         
-        # Minimum threshold to consider it as a renewable project
-        if best_category[1] >= 2:
+        # Minimum threshold to consider it as a renewable project (reduced from 2 to 1)
+        if best_category[1] >= 1:
             logger.info(f"Renewable project detected! Category: {best_category[0]}, Score: {best_category[1]}")
             return True, best_category[0]
         else:
-            logger.debug(f"Score too low: {best_category[1]} (minimum: 2)")
+            logger.debug(f"Score too low: {best_category[1]} (minimum: 1)")
     else:
         logger.debug("No renewable energy categories detected")
     
@@ -416,8 +416,9 @@ def is_pipeline_project(text):
             completed_match = True
             break
     
-    # If we find pipeline indicators and no completion indicators, it's likely a pipeline project
-    return pipeline_match and not completed_match
+    # More lenient: accept if no completion indicators found, even without explicit pipeline keywords
+    # This allows more projects through while still filtering out obviously completed ones
+    return not completed_match
 
 def extract_capacity(text, category):
     """Extract capacity information based on category patterns"""
@@ -608,28 +609,27 @@ def extract_project_data(article_url, content=None):
         logger.info(f"Processing article: {content.get('title', 'No Title')} | URL: {article_url}")
         logger.debug(f"Article text length: {len(content['text'])} characters")
         
-        # Check if it's an India project
+        # Check if it's an India project with more logging
         india_project = is_india_project(content['text'])
+        logger.info(f"India project check result: {india_project} for {article_url}")
         if not india_project:
-            logger.info(f"Not an India project: {article_url}")
+            logger.info(f"Article rejected - Not an India project: {article_url[:100]}...")
             return None
-        else:
-            logger.info(f"India project confirmed: {article_url}")
         
         # Check if it's a renewable project - this is where our detection happens
         is_renewable, energy_category = is_renewable_project(content['text'])
+        logger.info(f"Renewable project check result: {is_renewable}, Category: {energy_category} for {article_url}")
         if not is_renewable or not energy_category:
-            logger.info(f"Not a renewable energy project: {article_url}")
+            logger.info(f"Article rejected - Not a renewable energy project: {article_url[:100]}...")
             return None
-        else:
-            logger.info(f"Renewable project detected - Category: {energy_category}")
         
-        # Check if it's a pipeline project
-        if not is_pipeline_project(content['text']):
-            logger.info(f"Not a pipeline project: {article_url}")
+        # Check if it's a pipeline project with more lenient criteria
+        pipeline_check = is_pipeline_project(content['text'])
+        logger.info(f"Pipeline project check result: {pipeline_check} for {article_url}")
+        # Make this check less strict - accept if unclear
+        if not pipeline_check:
+            logger.info(f"Article rejected - Not a pipeline project: {article_url[:100]}...")
             return None
-        else:
-            logger.info(f"Pipeline project confirmed: {article_url}")
         
         # If we got this far, we have a valid renewable energy project!
         logger.info(f"NEW PROJECT FOUND! Category: {energy_category}, URL: {article_url}")
