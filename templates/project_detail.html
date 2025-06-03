@@ -89,7 +89,7 @@
                             <div class="card bg-dark-subtle h-100">
                                 <div class="card-body">
                                     <h5 class="text-muted">Cell Capacity</h5>
-                                    <p class="display-5 fw-bold mb-0">{{ project.cell_capacity|round(2) }}</p>
+                                    <p class="display-5 fw-bold mb-0">{{ (project.cell_capacity or 0)|round(2) }}</p>
                                     <p class="text-muted">GW</p>
                                 </div>
                             </div>
@@ -98,7 +98,7 @@
                             <div class="card bg-dark-subtle h-100">
                                 <div class="card-body">
                                     <h5 class="text-muted">Module Capacity</h5>
-                                    <p class="display-5 fw-bold mb-0">{{ project.module_capacity|round(2) }}</p>
+                                    <p class="display-5 fw-bold mb-0">{{ (project.module_capacity or 0)|round(2) }}</p>
                                     <p class="text-muted">GW</p>
                                 </div>
                             </div>
@@ -107,7 +107,7 @@
                             <div class="card bg-dark-subtle h-100">
                                 <div class="card-body">
                                     <h5 class="text-muted">Integration Capacity</h5>
-                                    <p class="display-5 fw-bold mb-0">{{ project.integration_capacity|round(2) }}</p>
+                                    <p class="display-5 fw-bold mb-0">{{ (project.integration_capacity or 0)|round(2) }}</p>
                                     <p class="text-muted">GW</p>
                                 </div>
                             </div>
@@ -117,7 +117,7 @@
                             <div class="card bg-dark-subtle h-100">
                                 <div class="card-body">
                                     <h5 class="text-muted">Cell Capacity</h5>
-                                    <p class="display-5 fw-bold mb-0">{{ project.cell_capacity|round(2) }}</p>
+                                    <p class="display-5 fw-bold mb-0">{{ (project.cell_capacity or 0)|round(2) }}</p>
                                     <p class="text-muted">GWh</p>
                                 </div>
                             </div>
@@ -126,7 +126,7 @@
                             <div class="card bg-dark-subtle h-100">
                                 <div class="card-body">
                                     <h5 class="text-muted">Module Capacity</h5>
-                                    <p class="display-5 fw-bold mb-0">{{ project.module_capacity|round(2) }}</p>
+                                    <p class="display-5 fw-bold mb-0">{{ (project.module_capacity or 0)|round(2) }}</p>
                                     <p class="text-muted">GWh</p>
                                 </div>
                             </div>
@@ -135,7 +135,7 @@
                             <div class="card bg-dark-subtle h-100">
                                 <div class="card-body">
                                     <h5 class="text-muted">Integration Capacity</h5>
-                                    <p class="display-5 fw-bold mb-0">{{ project.integration_capacity|round(2) }}</p>
+                                    <p class="display-5 fw-bold mb-0">{{ (project.integration_capacity or 0)|round(2) }}</p>
                                     <p class="text-muted">GWh</p>
                                 </div>
                             </div>
@@ -146,7 +146,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <p class="text-muted mb-1">Investment (USD)</p>
-                        <p class="fw-bold">{% if project.investment_usd > 0 %}$ {{ project.investment_usd|round(2) }} Million{% else %}—{% endif %}</p>
+                        <p class="fw-bold">{% if project.investment_usd and project.investment_usd > 0 %}$ {{ project.investment_usd|round(2) }} Million{% else %}—{% endif %}</p>
                     </div>
                     <div class="col-md-6">
                         <p class="text-muted mb-1">Investment (INR)</p>
