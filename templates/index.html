@@ -10,7 +10,7 @@
             India Renewable Manufacturing Tracker
         </h1>
         <p class="col-md-8 fs-4">
-            Track solar and battery manufacturing projects across India. Stay updated with the latest developments in India's renewable energy manufacturing ecosystem.
+            Track renewable energy projects across India including Solar, Battery, Wind, Hydro, Green Hydrogen, and Biofuel. Stay updated with the latest developments in India's renewable energy ecosystem.
         </p>
         <div class="d-flex gap-2">
             <a href="/projects" class="btn btn-primary btn-lg">
@@ -53,11 +53,59 @@
         <div class="card h-100 dashboard-widget bg-dark-subtle">
             <div class="card-body text-center">
                 <h5 class="card-title">
-                    <i class="fas fa-newspaper text-primary me-2"></i> News Sources
+                    <i class="fas fa-chart-pie text-success me-2"></i> Total Projects
                 </h5>
-                <p class="display-4 fw-bold mb-0">{{ sources_count }}</p>
-                <p class="text-muted">Being Tracked</p>
-                <a href="/sources" class="btn btn-primary">View Sources</a>
+                <p class="display-4 fw-bold mb-0">{{ total_count }}</p>
+                <p class="text-muted">All Categories</p>
+                <a href="/projects" class="btn btn-success">View All Projects</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Renewable Energy Categories -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-wind text-success me-2"></i> Wind
+                </h5>
+                <p class="display-6 fw-bold mb-0">{{ wind_count }}</p>
+                <p class="text-muted small">Projects</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-water text-primary me-2"></i> Hydro
+                </h5>
+                <p class="display-6 fw-bold mb-0">{{ hydro_count }}</p>
+                <p class="text-muted small">Projects</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-atom text-warning me-2"></i> Green H₂
+                </h5>
+                <p class="display-6 fw-bold mb-0">{{ hydrogen_count }}</p>
+                <p class="text-muted small">Projects</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 dashboard-widget">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-leaf text-info me-2"></i> Biofuel
+                </h5>
+                <p class="display-6 fw-bold mb-0">{{ biofuel_count }}</p>
+                <p class="text-muted small">Projects</p>
             </div>
         </div>
     </div>

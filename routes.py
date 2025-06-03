@@ -11,10 +11,17 @@ import threading
 
 @app.route('/')
 def index():
-    # Get summary statistics
+    # Get summary statistics for all renewable energy categories
     solar_count = Project.query.filter_by(type='Solar').count()
     battery_count = Project.query.filter_by(type='Battery').count()
+    wind_count = Project.query.filter_by(type='Wind').count()
+    hydro_count = Project.query.filter_by(type='Hydro').count()
+    hydrogen_count = Project.query.filter(Project.type.in_(['Green Hydrogen', 'GreenHydrogen'])).count()
+    biofuel_count = Project.query.filter_by(type='Biofuel').count()
     sources_count = Source.query.count()
+    
+    # Total projects count
+    total_count = solar_count + battery_count + wind_count + hydro_count + hydrogen_count + biofuel_count
     
     # Recent projects
     recent_projects = Project.query.order_by(Project.created_at.desc()).limit(5).all()
@@ -28,6 +35,11 @@ def index():
     return render_template('index.html', 
                           solar_count=solar_count,
                           battery_count=battery_count,
+                          wind_count=wind_count,
+                          hydro_count=hydro_count,
+                          hydrogen_count=hydrogen_count,
+                          biofuel_count=biofuel_count,
+                          total_count=total_count,
                           sources_count=sources_count,
                           recent_projects=recent_projects,
                           state_summary=state_summary,
@@ -60,9 +72,15 @@ def dashboard():
     wind_capacity = db.session.query(db.func.sum(Project.generation_capacity)).filter_by(type='Wind').scalar() or 0
     hydro_capacity = db.session.query(db.func.sum(Project.generation_capacity)).filter_by(type='Hydro').scalar() or 0
     storage_capacity = db.session.query(db.func.sum(Project.storage_capacity)).filter_by(type='Battery').scalar() or 0
-    hydrogen_capacity = db.session.query(db.func.sum(Project.electrolyzer_capacity)).filter_by(type='GreenHydrogen').scalar() or 0
-    biogas_capacity = db.session.query(db.func.sum(Project.biofuel_capacity)).filter_by(type='Biogas').scalar() or 0
-    ethanol_capacity = db.session.query(db.func.sum(Project.biofuel_capacity)).filter_by(type='Ethanol').scalar() or 0
+    
+    # Handle both "Green Hydrogen" and "GreenHydrogen" variations
+    hydrogen_capacity = (
+        db.session.query(db.func.sum(Project.electrolyzer_capacity))
+        .filter(Project.type.in_(['Green Hydrogen', 'GreenHydrogen']))
+        .scalar() or 0
+    )
+    
+    biofuel_capacity = db.session.query(db.func.sum(Project.biofuel_capacity)).filter_by(type='Biofuel').scalar() or 0
     
     # Recent scrape logs
     recent_logs = ScrapeLog.query.order_by(ScrapeLog.timestamp.desc()).limit(10).all()
@@ -76,8 +94,7 @@ def dashboard():
                           hydro_capacity=hydro_capacity,
                           storage_capacity=storage_capacity,
                           hydrogen_capacity=hydrogen_capacity,
-                          biogas_capacity=biogas_capacity,
-                          ethanol_capacity=ethanol_capacity,
+                          biofuel_capacity=biofuel_capacity,
                           recent_logs=recent_logs,
                           datetime=datetime)
 
