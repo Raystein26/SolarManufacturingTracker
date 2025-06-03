@@ -9,6 +9,15 @@ from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
 
+# Import diagnostic tracker for monitoring potential projects
+try:
+    from diagnostic_tracker import diagnostic_tracker
+    DIAGNOSTIC_MODE = True
+    logger.info("Diagnostic tracker enabled for monitoring potential projects")
+except ImportError:
+    DIAGNOSTIC_MODE = False
+    logger.warning("Diagnostic tracker not available")
+
 # Check if newspaper3k is available
 try:
     from newspaper import Article
@@ -319,16 +328,36 @@ def extract_project_data(article_url, content=None):
     title = content.get('title', '')
     
     # Check if it's about India
-    if not is_india_project(text):
+    india_project = is_india_project(text)
+    if not india_project:
         return None
     
     # Check if it's a renewable energy project
     is_renewable, project_type = is_renewable_project(text)
     if not is_renewable:
+        # Track potential projects that might be renewable but didn't pass filters
+        if DIAGNOSTIC_MODE and any(keyword in text.lower() for keyword in ['energy', 'power', 'solar', 'wind', 'battery', 'hydrogen', 'biofuel']):
+            diagnostic_tracker.track_potential_project(
+                article_url,
+                title or "Unknown Title",
+                text[:500],
+                {'renewable_confidence': 0.2, 'project_type': project_type or 'Unknown'},
+                "Failed renewable energy project detection"
+            )
         return None
     
     # Check if it's a pipeline project
-    if not is_pipeline_project(text):
+    pipeline_project = is_pipeline_project(text)
+    if not pipeline_project:
+        # Track projects that are renewable but not pipeline
+        if DIAGNOSTIC_MODE:
+            diagnostic_tracker.track_potential_project(
+                article_url,
+                title or "Unknown Title", 
+                text[:500],
+                {'renewable_confidence': 0.8, 'pipeline_confidence': 0.2, 'project_type': project_type},
+                "Failed pipeline project detection - might be operational project"
+            )
         return None
     
     # Extract project details
