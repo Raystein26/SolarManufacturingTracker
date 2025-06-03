@@ -257,16 +257,41 @@ def is_pipeline_project(text):
     
     text_lower = text.lower()
     
-    # Completed project indicators
-    completed_indicators = [
-        'inaugurated', 'commissioned', 'started operations', 'operational since',
-        'opened', 'completed', 'has been running', 'already operational'
+    # Strong completed project indicators (already operational)
+    strong_completed_indicators = [
+        'inaugurated', 'started operations', 'operational since',
+        'has been running', 'already operational', 'currently operational',
+        'is operational', 'became operational'
     ]
     
-    # If completed indicators found, it's not a pipeline project
-    for indicator in completed_indicators:
+    # Check for strong completion indicators
+    for indicator in strong_completed_indicators:
         if indicator in text_lower:
             return False
+    
+    # Check for future completion dates (these indicate pipeline projects)
+    future_completion_patterns = [
+        r'(?:complete|commission|operational)\s*(?:by|in)\s*(?:20[2-9][5-9])',
+        r'(?:expected|planned)\s*(?:to be|completion|commissioning)',
+        r'will be\s*(?:completed|commissioned|operational)',
+        r'under\s*(?:construction|development)',
+        r'announced|planned|proposed'
+    ]
+    
+    import re
+    for pattern in future_completion_patterns:
+        if re.search(pattern, text_lower):
+            return True
+    
+    # If we find words like "completed" or "commissioned" but with future context, it's still pipeline
+    completion_words = ['completed', 'commissioned']
+    for word in completion_words:
+        if word in text_lower:
+            # Check if it's in future context
+            word_index = text_lower.find(word)
+            context = text_lower[max(0, word_index-50):word_index+50]
+            if any(future_word in context for future_word in ['by 20', 'in 20', 'expected', 'will be', 'to be']):
+                return True
     
     # Default to pipeline project
     return True
