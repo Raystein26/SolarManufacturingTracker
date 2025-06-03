@@ -315,8 +315,7 @@ function initializeCharts() {
             'Hydro (GW)', 
             'Storage (GWh)', 
             'H₂ (MW)', 
-            'Biogas (mmscmd)',
-            'Ethanol (ML)'
+            'Biofuel (ML)'
         ];
         
         const rawData = [
@@ -325,8 +324,7 @@ function initializeCharts() {
             parseFloat(capacityChart.dataset.hydroCapacity || 0),
             parseFloat(capacityChart.dataset.storageCapacity || 0),
             parseFloat(capacityChart.dataset.hydrogenCapacity || 0),
-            parseFloat(capacityChart.dataset.biogasCapacity || 0),
-            parseFloat(capacityChart.dataset.ethanolCapacity || 0)
+            parseFloat(capacityChart.dataset.biofuelCapacity || 0)
         ];
         
         // Filter out zero values for cleaner visualization

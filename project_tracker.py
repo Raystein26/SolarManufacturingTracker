@@ -272,7 +272,7 @@ def check_source(source):
                             new_project.power_approval = "N/A"
                             new_project.environment_clearance = "N/A"
                             new_project.almm_listing = "N/A"
-                            new_project.investment_usd = project_data.get("investment_usd", 0)
+                            new_project.investment_usd = safe_float_conversion(project_data.get("investment_usd", 0))
                             new_project.investment_inr = 0  # Will be calculated if needed
                             new_project.expected_completion = project_data.get("expected_completion", "2025")
                             new_project.last_updated = datetime.datetime.now().date()
