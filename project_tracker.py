@@ -246,15 +246,26 @@ def check_source(source):
                             new_project.input_type = "N/A"
                             new_project.output_type = "Electricity"
                             
-                            # Set capacity based on project type
+                            # Set capacity based on project type with proper error handling
+                            def safe_float_conversion(value):
+                                """Safely convert value to float, return None if conversion fails"""
+                                if value is None:
+                                    return None
+                                try:
+                                    if isinstance(value, str) and value.lower() in ['unknown', 'n/a', '']:
+                                        return None
+                                    return float(value)
+                                except (ValueError, TypeError):
+                                    return None
+                            
                             if project_data.get("generation_capacity"):
-                                new_project.generation_capacity = project_data["generation_capacity"]
+                                new_project.generation_capacity = safe_float_conversion(project_data["generation_capacity"])
                             if project_data.get("storage_capacity"):
-                                new_project.storage_capacity = project_data["storage_capacity"]
+                                new_project.storage_capacity = safe_float_conversion(project_data["storage_capacity"])
                             if project_data.get("electrolyzer_capacity"):
-                                new_project.electrolyzer_capacity = project_data["electrolyzer_capacity"]
+                                new_project.electrolyzer_capacity = safe_float_conversion(project_data["electrolyzer_capacity"])
                             if project_data.get("biofuel_capacity"):
-                                new_project.biofuel_capacity = project_data["biofuel_capacity"]
+                                new_project.biofuel_capacity = safe_float_conversion(project_data["biofuel_capacity"])
                             
                             new_project.status = project_data.get("status", "Pipeline")
                             new_project.land_acquisition = "N/A"

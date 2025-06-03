@@ -234,15 +234,45 @@ def is_renewable_project(text):
     
     text_lower = text.lower()
     
-    # Check for project indicators
-    project_indicators = [
-        'project', 'plant', 'facility', 'farm', 'park', 'installation',
-        'development', 'construction', 'capacity', 'expansion', 'build',
-        'investment', 'announce', 'plan', 'launch', 'commission'
+    # Filter out interview/discussion articles first
+    exclusion_indicators = [
+        'interview', 'discussion', 'qa session', 'q&a', 'conversation', 'chat with',
+        'talks to', 'speaks to', 'in conversation', 'opinion', 'commentary',
+        'podcast', 'webinar', 'event', 'conference', 'summit', 'conclave',
+        'leading with', 'tech trends', 'transformation in', 'vision for',
+        'champions', 'missing link', 'economic impact', 'downtime to downgrade'
     ]
     
-    has_project = any(indicator in text_lower for indicator in project_indicators)
-    if not has_project:
+    # If it's clearly an interview or discussion article, reject it
+    if any(exclusion in text_lower for exclusion in exclusion_indicators):
+        return False, None
+    
+    # Require strong project indicators with capacity/investment details
+    strong_project_indicators = [
+        'mw project', 'gw project', 'mwh project', 'gwh project',
+        'million investment', 'billion investment', 'crore investment',
+        'tender', 'epc', 'secures', 'awarded', 'construction',
+        'commissioning', 'operational', 'ground breaking',
+        'foundation stone', 'inaugurate'
+    ]
+    
+    # Check for strong project indicators
+    has_strong_project = any(indicator in text_lower for indicator in strong_project_indicators)
+    
+    # Also check for basic project words with capacity numbers
+    basic_project_words = ['project', 'plant', 'facility', 'farm', 'park', 'installation']
+    capacity_patterns = [
+        r'\d+\s*(?:mw|gw|mwh|gwh)',
+        r'\d+\s*(?:million|billion|crore)',
+        r'₹\s*\d+',
+        r'\$\s*\d+'
+    ]
+    
+    has_basic_project = any(word in text_lower for word in basic_project_words)
+    has_capacity = any(re.search(pattern, text_lower, re.IGNORECASE) for pattern in capacity_patterns)
+    
+    # Require either strong indicators OR basic project + capacity
+    if not (has_strong_project or (has_basic_project and has_capacity)):
         return False, None
     
     # Check for renewable energy categories
@@ -265,7 +295,7 @@ def is_renewable_project(text):
         best_category = max(scores, key=scores.get)
         best_score = scores[best_category]
         
-        if best_score >= 1:  # Lower threshold for more detection
+        if best_score >= 2:  # Higher threshold for better accuracy
             return True, best_category
     
     return False, None
