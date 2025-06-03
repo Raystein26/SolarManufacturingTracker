@@ -10,84 +10,69 @@ logger = logging.getLogger(__name__)
 
 # Excel file constants
 EXCEL_FILE = "india_renewable_projects.xlsx"
-SOLAR_SHEET = "Solar Projects"
-BATTERY_SHEET = "Battery Projects"
-SOURCES_SHEET = "Sources"
 
 def export_to_excel():
-    """Export database to Excel file"""
+    """Export database to Excel file with separate sheets for each renewable energy category"""
     try:
         logger.info(f"Exporting database to {EXCEL_FILE}")
         
-        # Get all projects
+        # Get projects by category
         solar_projects = Project.query.filter_by(type='Solar').all()
         battery_projects = Project.query.filter_by(type='Battery').all()
+        wind_projects = Project.query.filter_by(type='Wind').all()
+        hydro_projects = Project.query.filter_by(type='Hydro').all()
+        hydrogen_projects = Project.query.filter(Project.type.in_(['Green Hydrogen', 'GreenHydrogen'])).all()
+        biofuel_projects = Project.query.filter_by(type='Biofuel').all()
         
         # Get all sources
         sources = Source.query.all()
         
-        # Create dataframes
-        solar_df = pd.DataFrame([
-            {
-                'Index': p.index,
-                'Type': p.type,
-                'Name': clean_project_name(p.name),
-                'Company': p.company,
-                'Ownership': p.ownership,
-                'PLI/Non-PLI': p.pli_status,
-                'State': p.state,
-                'Location': p.location,
-                'Announcement Date': p.announcement_date.strftime('%d-%m-%Y') if p.announcement_date else 'NA',
-                'Category': p.category if p.category else 'NA',
-                'Input': p.input_type if p.input_type else 'NA',
-                'Output': p.output_type if p.output_type else 'NA',
-                'Cell Capacity (GW)': p.cell_capacity if p.cell_capacity is not None else 0.0,
-                'Module Capacity (GW)': p.module_capacity if p.module_capacity is not None else 0.0,
-                'Integration Capacity (GW)': p.integration_capacity if p.integration_capacity is not None else 0.0,
-                'Status': p.status if p.status else 'NA',
-                'Land Acquisition': p.land_acquisition if p.land_acquisition else 'NA',
-                'Power Approval': p.power_approval if p.power_approval else 'NA',
-                'Environment Clearance': p.environment_clearance if p.environment_clearance else 'NA',
-                'ALMM Listing': p.almm_listing if p.almm_listing else 'NA',
-                'Investment (USD Million)': p.investment_usd if p.investment_usd is not None else 0.0,
-                'Investment (INR Billion)': p.investment_inr if p.investment_inr is not None else 0.0,
-                'Expected Completion': p.expected_completion if p.expected_completion else 'NA',
-                'Last Updated': p.last_updated.strftime('%d-%m-%Y') if p.last_updated else 'NA',
-                'Source': p.source
-            } 
-            for p in solar_projects
-        ])
+        # Helper function to create project dataframe
+        def create_project_df(projects, project_type):
+            return pd.DataFrame([
+                {
+                    'Index': p.index,
+                    'Type': p.type,
+                    'Name': clean_project_name(p.name),
+                    'Company': p.company,
+                    'Ownership': p.ownership,
+                    'PLI/Non-PLI': p.pli_status,
+                    'State': p.state,
+                    'Location': p.location,
+                    'Announcement Date': p.announcement_date.strftime('%d-%m-%Y') if p.announcement_date else 'NA',
+                    'Category': p.category if p.category else 'NA',
+                    'Input': p.input_type if p.input_type else 'NA',
+                    'Output': p.output_type if p.output_type else 'NA',
+                    'Generation Capacity (GW)': p.generation_capacity if p.generation_capacity is not None else 0.0,
+                    'Storage Capacity (GWh)': p.storage_capacity if p.storage_capacity is not None else 0.0,
+                    'Cell Capacity (GW)': p.cell_capacity if p.cell_capacity is not None else 0.0,
+                    'Module Capacity (GW)': p.module_capacity if p.module_capacity is not None else 0.0,
+                    'Integration Capacity (GW)': p.integration_capacity if p.integration_capacity is not None else 0.0,
+                    'Electrolyzer Capacity (MW)': p.electrolyzer_capacity if p.electrolyzer_capacity is not None else 0.0,
+                    'Hydrogen Production (tons/day)': p.hydrogen_production if p.hydrogen_production is not None else 0.0,
+                    'Biofuel Capacity (ML/year)': p.biofuel_capacity if p.biofuel_capacity is not None else 0.0,
+                    'Feedstock Type': p.feedstock_type if p.feedstock_type else 'NA',
+                    'Status': p.status if p.status else 'NA',
+                    'Land Acquisition': p.land_acquisition if p.land_acquisition else 'NA',
+                    'Power Approval': p.power_approval if p.power_approval else 'NA',
+                    'Environment Clearance': p.environment_clearance if p.environment_clearance else 'NA',
+                    'ALMM Listing': p.almm_listing if p.almm_listing else 'NA',
+                    'Investment (USD Million)': p.investment_usd if p.investment_usd is not None else 0.0,
+                    'Investment (INR Billion)': p.investment_inr if p.investment_inr is not None else 0.0,
+                    'Expected Completion': p.expected_completion if p.expected_completion else 'NA',
+                    'Last Updated': p.last_updated.strftime('%d-%m-%Y') if p.last_updated else 'NA',
+                    'Source': p.source
+                } 
+                for p in projects
+            ])
         
-        battery_df = pd.DataFrame([
-            {
-                'Index': p.index,
-                'Type': p.type,
-                'Name': clean_project_name(p.name),
-                'Company': p.company,
-                'Ownership': p.ownership,
-                'PLI/Non-PLI': p.pli_status,
-                'State': p.state,
-                'Location': p.location,
-                'Announcement Date': p.announcement_date.strftime('%d-%m-%Y') if p.announcement_date else 'NA',
-                'Category': p.category if p.category else 'NA',
-                'Input': p.input_type if p.input_type else 'NA',
-                'Output': p.output_type if p.output_type else 'NA',
-                'Cell Capacity (GWh)': p.cell_capacity if p.cell_capacity is not None else 0.0,
-                'Module Capacity (GWh)': p.module_capacity if p.module_capacity is not None else 0.0,
-                'Integration Capacity (GWh)': p.integration_capacity if p.integration_capacity is not None else 0.0,
-                'Status': p.status if p.status else 'NA',
-                'Land Acquisition': p.land_acquisition if p.land_acquisition else 'NA',
-                'Power Approval': p.power_approval if p.power_approval else 'NA',
-                'Environment Clearance': p.environment_clearance if p.environment_clearance else 'NA',
-                'ALMM Listing': p.almm_listing if p.almm_listing else 'NA',
-                'Investment (USD Million)': p.investment_usd if p.investment_usd is not None else 0.0,
-                'Investment (INR Billion)': p.investment_inr if p.investment_inr is not None else 0.0,
-                'Expected Completion': p.expected_completion if p.expected_completion else 'NA',
-                'Last Updated': p.last_updated.strftime('%d-%m-%Y') if p.last_updated else 'NA',
-                'Source': p.source
-            } 
-            for p in battery_projects
-        ])
+        # Create dataframes for all renewable energy categories
+        solar_df = create_project_df(solar_projects, 'Solar')
+        battery_df = create_project_df(battery_projects, 'Battery') 
+        wind_df = create_project_df(wind_projects, 'Wind')
+        hydro_df = create_project_df(hydro_projects, 'Hydro')
+        hydrogen_df = create_project_df(hydrogen_projects, 'Green Hydrogen')
+        biofuel_df = create_project_df(biofuel_projects, 'Biofuel')
         
         sources_df = pd.DataFrame([
             {
@@ -105,9 +90,22 @@ def export_to_excel():
         filename = f"india_renewable_projects_{timestamp}.xlsx"
         
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            solar_df.to_excel(writer, sheet_name=SOLAR_SHEET, index=False)
-            battery_df.to_excel(writer, sheet_name=BATTERY_SHEET, index=False)
-            sources_df.to_excel(writer, sheet_name=SOURCES_SHEET, index=False)
+            # Create separate sheets for each renewable energy category
+            if not solar_df.empty:
+                solar_df.to_excel(writer, sheet_name='Solar Projects', index=False)
+            if not battery_df.empty:
+                battery_df.to_excel(writer, sheet_name='Battery Projects', index=False)
+            if not wind_df.empty:
+                wind_df.to_excel(writer, sheet_name='Wind Projects', index=False)
+            if not hydro_df.empty:
+                hydro_df.to_excel(writer, sheet_name='Hydro Projects', index=False)
+            if not hydrogen_df.empty:
+                hydrogen_df.to_excel(writer, sheet_name='Green Hydrogen Projects', index=False)
+            if not biofuel_df.empty:
+                biofuel_df.to_excel(writer, sheet_name='Biofuel Projects', index=False)
+            
+            # Add sources sheet
+            sources_df.to_excel(writer, sheet_name='Sources', index=False)
             
         logger.info(f"Excel file created: {filename}")
         return filename
