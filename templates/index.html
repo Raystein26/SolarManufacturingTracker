@@ -23,89 +23,90 @@
     </div>
 </div>
 
-<!-- Stats Summary Cards -->
+<!-- Renewable Energy Categories -->
 <div class="row mb-4">
     <div class="col-md-4 mb-3">
-        <div class="card h-100 dashboard-widget bg-dark-subtle">
+        <div class="card h-100 dashboard-widget">
             <div class="card-body text-center">
                 <h5 class="card-title">
-                    <i class="fas fa-solar-panel text-warning me-2"></i> Solar Projects
+                    <i class="fas fa-solar-panel text-warning me-2"></i> Solar
                 </h5>
                 <p class="display-4 fw-bold mb-0">{{ solar_count }}</p>
-                <p class="text-muted">Manufacturing Facilities</p>
-                <a href="/projects?type=solar" class="btn btn-warning">View Solar Projects</a>
+                <p class="text-muted">Projects</p>
             </div>
         </div>
     </div>
     <div class="col-md-4 mb-3">
-        <div class="card h-100 dashboard-widget bg-dark-subtle">
+        <div class="card h-100 dashboard-widget">
             <div class="card-body text-center">
                 <h5 class="card-title">
-                    <i class="fas fa-battery-three-quarters text-info me-2"></i> Battery Projects
+                    <i class="fas fa-battery-three-quarters text-info me-2"></i> Battery
                 </h5>
                 <p class="display-4 fw-bold mb-0">{{ battery_count }}</p>
-                <p class="text-muted">Manufacturing Facilities</p>
-                <a href="/projects?type=battery" class="btn btn-info">View Battery Projects</a>
+                <p class="text-muted">Projects</p>
             </div>
         </div>
     </div>
     <div class="col-md-4 mb-3">
-        <div class="card h-100 dashboard-widget bg-dark-subtle">
-            <div class="card-body text-center">
-                <h5 class="card-title">
-                    <i class="fas fa-chart-pie text-success me-2"></i> Total Projects
-                </h5>
-                <p class="display-4 fw-bold mb-0">{{ total_count }}</p>
-                <p class="text-muted">All Categories</p>
-                <a href="/projects" class="btn btn-success">View All Projects</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Additional Renewable Energy Categories -->
-<div class="row mb-4">
-    <div class="col-md-3 mb-3">
         <div class="card h-100 dashboard-widget">
             <div class="card-body text-center">
                 <h5 class="card-title">
                     <i class="fas fa-wind text-success me-2"></i> Wind
                 </h5>
-                <p class="display-6 fw-bold mb-0">{{ wind_count }}</p>
-                <p class="text-muted small">Projects</p>
+                <p class="display-4 fw-bold mb-0">{{ wind_count }}</p>
+                <p class="text-muted">Projects</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
         <div class="card h-100 dashboard-widget">
             <div class="card-body text-center">
                 <h5 class="card-title">
                     <i class="fas fa-water text-primary me-2"></i> Hydro
                 </h5>
-                <p class="display-6 fw-bold mb-0">{{ hydro_count }}</p>
-                <p class="text-muted small">Projects</p>
+                <p class="display-4 fw-bold mb-0">{{ hydro_count }}</p>
+                <p class="text-muted">Projects</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md-4 mb-3">
         <div class="card h-100 dashboard-widget">
             <div class="card-body text-center">
                 <h5 class="card-title">
                     <i class="fas fa-atom text-warning me-2"></i> Green H₂
                 </h5>
-                <p class="display-6 fw-bold mb-0">{{ hydrogen_count }}</p>
-                <p class="text-muted small">Projects</p>
+                <p class="display-4 fw-bold mb-0">{{ hydrogen_count }}</p>
+                <p class="text-muted">Projects</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md-4 mb-3">
         <div class="card h-100 dashboard-widget">
             <div class="card-body text-center">
                 <h5 class="card-title">
-                    <i class="fas fa-leaf text-info me-2"></i> Biofuel
+                    <i class="fas fa-leaf text-success me-2"></i> Biofuel
                 </h5>
-                <p class="display-6 fw-bold mb-0">{{ biofuel_count }}</p>
-                <p class="text-muted small">Projects</p>
+                <p class="display-4 fw-bold mb-0">{{ biofuel_count }}</p>
+                <p class="text-muted">Projects</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Total Projects Summary -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card dashboard-widget bg-dark-subtle">
+            <div class="card-body text-center">
+                <h4 class="card-title">
+                    <i class="fas fa-chart-pie text-success me-2"></i> Total Renewable Energy Projects
+                </h4>
+                <p class="display-3 fw-bold mb-2">{{ total_count }}</p>
+                <p class="text-muted mb-3">Across All Categories</p>
+                <a href="/projects" class="btn btn-success btn-lg">View All Projects</a>
             </div>
         </div>
     </div>
