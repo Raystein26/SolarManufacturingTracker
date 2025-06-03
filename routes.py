@@ -399,3 +399,20 @@ def add_project():
             return redirect(url_for('add_project'))
     
     return render_template('add_project.html', datetime=datetime)
+
+@app.route('/api/project/<int:project_id>/delete', methods=['DELETE'])
+def delete_project(project_id):
+    """Delete a specific project"""
+    try:
+        project = Project.query.get_or_404(project_id)
+        project_name = project.name
+        
+        db.session.delete(project)
+        db.session.commit()
+        
+        logger.info(f"Project deleted: {project_name} (ID: {project_id})")
+        return jsonify({'success': True, 'message': 'Project deleted successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error deleting project {project_id}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
