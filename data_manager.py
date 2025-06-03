@@ -272,3 +272,58 @@ def import_from_excel(excel_file):
         logger.error(f"Error importing from Excel: {str(e)}")
         db.session.rollback()
         raise
+
+def export_single_project_to_excel(project):
+    """Export a single project to Excel file"""
+    try:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"project_{project.id}_{timestamp}.xlsx"
+        
+        # Create project data
+        project_data = {
+            'Index': project.index,
+            'Type': project.type,
+            'Name': clean_project_name(project.name),
+            'Company': project.company,
+            'Ownership': project.ownership,
+            'PLI/Non-PLI': project.pli_status,
+            'State': project.state,
+            'Location': project.location,
+            'Announcement Date': project.announcement_date.strftime('%d-%m-%Y') if project.announcement_date else 'NA',
+            'Category': project.category if project.category else 'NA',
+            'Input': project.input_type if project.input_type else 'NA',
+            'Output': project.output_type if project.output_type else 'NA',
+            'Generation Capacity (GW)': project.generation_capacity if project.generation_capacity is not None else 0.0,
+            'Storage Capacity (GWh)': project.storage_capacity if project.storage_capacity is not None else 0.0,
+            'Cell Capacity (GW)': project.cell_capacity if project.cell_capacity is not None else 0.0,
+            'Module Capacity (GW)': project.module_capacity if project.module_capacity is not None else 0.0,
+            'Integration Capacity (GW)': project.integration_capacity if project.integration_capacity is not None else 0.0,
+            'Electrolyzer Capacity (MW)': project.electrolyzer_capacity if project.electrolyzer_capacity is not None else 0.0,
+            'Hydrogen Production (tons/day)': project.hydrogen_production if project.hydrogen_production is not None else 0.0,
+            'Biofuel Capacity (ML/year)': project.biofuel_capacity if project.biofuel_capacity is not None else 0.0,
+            'Feedstock Type': project.feedstock_type if project.feedstock_type else 'NA',
+            'Status': project.status,
+            'Land Acquisition': project.land_acquisition if project.land_acquisition else 'NA',
+            'Power Approval': project.power_approval if project.power_approval else 'NA',
+            'Environment Clearance': project.environment_clearance if project.environment_clearance else 'NA',
+            'ALMM Listing': project.almm_listing if project.almm_listing else 'NA',
+            'Investment (USD Million)': project.investment_usd if project.investment_usd is not None else 0.0,
+            'Investment (INR Billion)': project.investment_inr if project.investment_inr is not None else 0.0,
+            'Expected Completion': project.expected_completion if project.expected_completion else 'NA',
+            'Last Updated': project.last_updated.strftime('%d-%m-%Y') if project.last_updated else 'NA',
+            'Source': project.source
+        }
+        
+        # Create DataFrame
+        df = pd.DataFrame([project_data])
+        
+        # Export to Excel
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=f'{project.type}_Project', index=False)
+        
+        logger.info(f"Single project exported to {filename}")
+        return filename
+        
+    except Exception as e:
+        logger.error(f"Error exporting single project: {str(e)}")
+        raise

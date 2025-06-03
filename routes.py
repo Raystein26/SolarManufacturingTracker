@@ -1,5 +1,5 @@
 import flask
-from flask import render_template, request, jsonify, flash, redirect, url_for
+from flask import render_template, request, jsonify, flash, redirect, url_for, send_file
 from app import app, db, logger
 from models import Project, Source, NewsArticle, ScrapeLog
 from project_tracker import run_manual_check
@@ -416,3 +416,61 @@ def delete_project(project_id):
     except Exception as e:
         logger.error(f"Error deleting project {project_id}: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/project/<int:project_id>/export')
+def export_single_project(project_id):
+    """Export a single project to Excel"""
+    try:
+        from data_manager import export_single_project_to_excel
+        
+        project = Project.query.get_or_404(project_id)
+        filename = export_single_project_to_excel(project)
+        
+        return send_file(filename, as_attachment=True, download_name=f"project_{project_id}_{project.name[:30].replace(' ', '_')}.xlsx")
+        
+    except Exception as e:
+        logger.error(f"Error exporting project {project_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
+def edit_project(project_id):
+    """Edit a specific project"""
+    project = Project.query.get_or_404(project_id)
+    
+    if request.method == 'POST':
+        try:
+            # Update project fields from form data
+            project.name = request.form.get('name', project.name)
+            project.company = request.form.get('company', project.company)
+            project.type = request.form.get('type', project.type)
+            project.state = request.form.get('state', project.state)
+            project.location = request.form.get('location', project.location)
+            project.status = request.form.get('status', project.status)
+            project.expected_completion = request.form.get('expected_completion', project.expected_completion)
+            
+            # Handle capacity fields based on project type
+            if project.type in ['Solar', 'Battery']:
+                if request.form.get('cell_capacity'):
+                    project.cell_capacity = float(request.form.get('cell_capacity', 0))
+                if request.form.get('module_capacity'):
+                    project.module_capacity = float(request.form.get('module_capacity', 0))
+                if request.form.get('integration_capacity'):
+                    project.integration_capacity = float(request.form.get('integration_capacity', 0))
+            
+            # Handle investment fields
+            if request.form.get('investment_usd'):
+                project.investment_usd = float(request.form.get('investment_usd', 0))
+            if request.form.get('investment_inr'):
+                project.investment_inr = float(request.form.get('investment_inr', 0))
+            
+            project.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            flash('Project updated successfully', 'success')
+            return redirect(url_for('project_detail', project_id=project.id))
+            
+        except Exception as e:
+            logger.error(f"Error updating project {project_id}: {str(e)}")
+            flash(f'Error updating project: {str(e)}', 'danger')
+    
+    return render_template('edit_project.html', project=project, datetime=datetime)
