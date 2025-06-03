@@ -108,10 +108,11 @@ def fetch_news_from_source(source_url):
             else:
                 continue
                 
-            # Filter out non-article links
+            # Filter out non-article links and problematic file types
             if any(excluded in link.lower() for excluded in [
                 'javascript:', 'mailto:', '#', 'facebook.com', 'twitter.com', 
-                'linkedin.com', 'instagram.com', 'youtube.com'
+                'linkedin.com', 'instagram.com', 'youtube.com', '.pdf', '.doc', 
+                '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar'
             ]):
                 continue
                 
@@ -131,8 +132,13 @@ def fetch_news_from_source(source_url):
         return []
 
 def extract_article_content(article_url):
-    """Extract content from an article"""
+    """Extract content from an article with timeout protection"""
     try:
+        # Skip problematic file types and domains
+        if any(ext in article_url.lower() for ext in ['.pdf', '.doc', '.docx', '.xls', '.xlsx']):
+            logger.warning(f"Skipping file download: {article_url}")
+            return {'title': '', 'text': '', 'publish_date': None}
+        
         if USE_NEWSPAPER:
             article = Article(article_url)
             article.download()
@@ -144,12 +150,17 @@ def extract_article_content(article_url):
                 'publish_date': article.publish_date
             }
         else:
-            # Fallback method using requests and BeautifulSoup
+            # Fallback method using requests and BeautifulSoup with shorter timeout
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
-            response = requests.get(article_url, headers=headers, timeout=15)
+            response = requests.get(article_url, headers=headers, timeout=10)
             response.raise_for_status()
+            
+            # Skip if response is too large (likely a file)
+            if len(response.content) > 5 * 1024 * 1024:  # 5MB limit
+                logger.warning(f"Skipping large content: {article_url}")
+                return {'title': '', 'text': '', 'publish_date': None}
             
             soup = BeautifulSoup(response.text, 'html.parser')
             
