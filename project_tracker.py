@@ -271,7 +271,7 @@ def check_source(source):
                             db.session.commit()
                             projects_added += 1
                             progress.add_projects(1)  # Update the progress tracker
-                            logger.info(f"Added new project: {new_project.name} from {article_url}")
+                            logger.info(f"✓ NEW PROJECT ADDED ({projects_added}): {new_project.name} [{new_project.type}] from {article_url}")
                         except Exception as e:
                             logger.error(f"Error adding project from {article_url}: {str(e)}")
                             db.session.rollback()
@@ -301,7 +301,7 @@ def check_source(source):
             log_entry.projects_added = projects_added
             db.session.commit()
         
-        logger.info(f"Completed checking {source.name}. Processed: {processed_count}, Projects added: {projects_added}")
+        logger.info(f"✓ COMPLETED {source.name}. Processed: {processed_count}, Projects added: {projects_added}")
         
         # Return the number of projects added from this source
         return projects_added
