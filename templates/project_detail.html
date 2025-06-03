@@ -261,6 +261,7 @@
 </div>
 {% endblock %}
 
+{% block scripts %}
 <script>
 function deleteProject(projectId) {
     if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
@@ -282,3 +283,4 @@ function deleteProject(projectId) {
     }
 }
 </script>
+{% endblock %}
