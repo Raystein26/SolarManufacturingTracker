@@ -1,6 +1,7 @@
 import os
 import logging
 import threading
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -42,6 +43,11 @@ app.config["DIAGNOSTIC_MODE"] = True  # Enable diagnostic mode to track potentia
 
 # Initialize the app with the extension
 db.init_app(app)
+
+# Make datetime available in all templates
+@app.context_processor
+def inject_datetime():
+    return {'datetime': datetime}
 
 # Import routes after app initialization to avoid circular imports
 from routes import *

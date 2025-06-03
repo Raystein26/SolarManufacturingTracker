@@ -95,14 +95,18 @@
                             </span>
                         </td>
                         <td>
-                            {% if project.type == 'Solar' %}
-                                {{ project.module_capacity }} GW
+                            {% if project.module_capacity %}
+                                {% if project.type == 'Solar' %}
+                                    {{ project.module_capacity }} GW
+                                {% else %}
+                                    {{ project.module_capacity }} GWh
+                                {% endif %}
                             {% else %}
-                                {{ project.module_capacity }} GWh
+                                -
                             {% endif %}
                         </td>
                         <td>
-                            {% if project.investment_usd > 0 %}
+                            {% if project.investment_usd and project.investment_usd > 0 %}
                                 ${{ project.investment_usd }} M
                             {% else %}
                                 -
